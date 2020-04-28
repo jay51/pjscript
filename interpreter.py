@@ -4,12 +4,13 @@ example = """
 var age = 2;
 var name = "jack";
 
+var newage = age;
 name = "jack and me";
 
-var fullname = name;
-var newage = age;
-
 log(1, "it's working fuck yea", name);
+
+var x = add(age, add(2,3));
+log(x);
 """
 
 class Tokens():
@@ -379,7 +380,25 @@ class NodeVisiter():
     def generic_visit(self, node):
         raise Exception("No visit_{} method".format(type(node).__name__))
  
+
+
+class BuiltIn():
+
+    @staticmethod
+    def log(*args):
+        for param in args:
+            print(param, end=" ")
+        print()
+        return 0
+
+
+    @staticmethod
+    def add(*args):
+        # print(args)
+        # print(sum(args))
+        return sum(args)
         
+
 class Interpreter(NodeVisiter):
     def __init__(self, tree):
         self.symbol_table = dict()
@@ -392,13 +411,16 @@ class Interpreter(NodeVisiter):
         args = node.args
         function = node.identifier
         # we support only the log function right now
-        if function == "log":
+        if getattr(BuiltIn, function, None):
+            function = getattr(BuiltIn, function)
+            arguments = []
             for param in args:
-                value = self.visit(param)
-                print(value, end=" ")
-            print()
+                arguments.append(self.visit(param))
+            return function(*arguments)
+        else:
+            return NoOp()
             
-            
+
     def visit_VarDeclaration(self, node):
         name = node.left
         value = self.visit(node.right)
@@ -419,18 +441,17 @@ class Interpreter(NodeVisiter):
 
     def visit_Identifier(self, node):
         value = self.symbol_table.get(node.value)
-        if value:
-            return value
-        else:
+        if value is None:
             self.error(node.value)
+        return value
             
-            
+
     def visit_String(self, node):
         return node.value
         
         
     def visit_Num(self, node):
-        return node.value
+        return int(node.value)
         
         
     def visit_NoOp(self, node):
