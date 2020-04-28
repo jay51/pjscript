@@ -179,22 +179,45 @@ AST
 Program {
     ...
     body:[
-        VarDeclaration, # var name = "jack";
-        VarDeclaration, # var age = 2;
-        ExpressionStatement # print(name)
+        VarDeclaration, # var name = 2;
+        Var_assigne, # name = 2;
+        CallExpression # log(name)
     ]
 }
+
 Program
-    body: [ExpressionStatement*]
-ExpressionStatement
-    type: CallExpression, VarDeclaration
+    body: [Statement*]
+
+
 CallExpression
-    callee: identifier
+    callee: id
     args: []
+
+
 VarDeclaration, # var name = "jack";
     type: var
-    id: identifier
-    value: String
+    left: id
+    right: expression
+
+
+
+Var_assigne, # var name = "jack";
+    left: id
+    right: expression
+
+
+expression: String
+            | Num
+            | id
+
+
+id: CallExpression
+    | Var_assigne
+    | identifier
+
+
+identifier: [a-zA-Z][a-zA-Z0-9_]
+
 """
 
 
