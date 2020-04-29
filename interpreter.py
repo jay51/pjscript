@@ -39,6 +39,7 @@ class Token():
     
     def equal(self, type):
         return self.type == type
+
     def __str__(self):
         return "< {type} : {value} >".format(type=self.type, value=self.value)
     __repr__ = __str__
@@ -72,6 +73,8 @@ class Lexer():
             self.curr_char = None
         else:
             self.curr_char = self.text[self.pos]
+
+
     def peek(self):
         peek_pos = self.pos + 1
         if(peek_pos > self.length - 1):
@@ -89,6 +92,8 @@ class Lexer():
         # skip "*/"
         self.advance()
         self.advance()
+
+
     def skip_whitespace(self):
         while(self.curr_char != None and self.curr_char.isspace()):
             self.advance()
@@ -100,10 +105,10 @@ class Lexer():
             value += self.curr_char
             self.advance()
         self.advance()
-        
-        
         token = Token(Tokens.STRING, value)
         return token
+
+
     def collect_number(self):
         value = ""
         while(self.curr_char != None and self.curr_char.isdigit()):
@@ -118,6 +123,7 @@ class Lexer():
         while(self.curr_char != None and self.curr_char.isalnum()):
             id += self.curr_char
             self.advance()
+
         if hasattr(Tokens, id):
             token_type = getattr(Tokens, id) # RESERVED_KEYWORDS (var, log)
             return Token(token_type, id)
@@ -243,8 +249,10 @@ class Identifier():
     def __init__(self, token):
         self.token = token
         self.value = token.value # var name
+
     def __str__(self):
         return "<{} : {}>".format(self.__class__.__name__, self.value)
+
     __repr__ = __str__
     
         
@@ -253,8 +261,10 @@ class VarDeclaration():
     def __init__(self, left, right):
         self.left = left
         self.right = right
+
     def __str__(self):
         return "VarDeclaration<{} : {}  -> {}>".format(self.left, self.right.__class__.__name__, self.right.value)
+
     __repr__ = __str__
     
 
@@ -263,8 +273,10 @@ class Assignment():
     def __init__(self, left, right):
         self.left = left
         self.right = right
+
     def __str__(self):
         return "Assignment<{} : {}  -> {}>".format(self.left, self.right.__class__.__name__, self.right.value)
+
     __repr__ = __str__
     
     
