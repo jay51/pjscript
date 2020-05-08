@@ -1,5 +1,5 @@
 example = """
-/* comment */
+/* comment
 
 var age = 2;
 var name = "jack";
@@ -11,6 +11,7 @@ log(1, "it's working fuck yea", name);
 
 var x = add(age, add(2,3));
 log(x);
+*/
 """
 
 class Tokens():
@@ -163,20 +164,20 @@ class Lexer():
             if self.curr_char == Tokens.ASSIGN:
                 self.advance()
                 return Token(Tokens.ASSIGN, Tokens.ASSIGN)
-            if self.curr_char.isalpha():
+            if self.curr_char and self.curr_char.isalpha():
                 return self.identifier()
             if self.curr_char == "\"":
                 self.advance()
                 return self.collect_string()
-            if self.curr_char.isdigit():
+            if self.curr_char and self.curr_char.isdigit():
                 return self.collect_number()
         return Token(Tokens.EOF, Tokens.EOF)
         
         
 # THIS WILL SHOW YOU THE TOKENS
-#lexer = Lexer(example)
-#for token in lexer:
-    #print(token)
+# lexer = Lexer(example)
+# for token in lexer:
+    # print(token)
     
     
 # parser
