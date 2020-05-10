@@ -18,16 +18,15 @@ log(x);
 
 var x = "hello world";
 
-function hi(){
-    log(x);
+function hi(st1, st2, st3){
+    log(st1);
+    log(st2);
+    log(st3);
 };
 
-function sayHi(){
 
-    var x = "sayHiworld";
-    log(x);
-    hi();
-    hi();
+function sayHi(){
+    hi("somthing", 1, 3);
 };
 
 
@@ -459,7 +458,7 @@ class Parser():
         elif self.curr_token.type == Tokens.IDENTIFIER:
             return self.id()
         # print("not considerd", self.curr_token.type)
-        return NoOp()
+        # return NoOp()
         
         
     def parse_string(self):
@@ -495,9 +494,13 @@ class SymbolTable():
         table: {}
         """.format(self.func_name, self.level, self.parent_scope, self.table)
 
+    __repr__ = __str__
 
     def insert(self, name, value):
         self.table[name] = value
+
+    def remove(self, name):
+        return self.table.pop(name)
 
 
     def get(self, name):
@@ -576,7 +579,23 @@ class Interpreter(NodeVisiter):
 
             func = self.current_scope.get(node.identifier)
             if func:
+                func_param_length = len(func.params)
+                func_arg_length = len(node.args)
+                if func_param_length != func_arg_length:
+                    raise Exception("{} Expectes {} args, but found {} args".format(func.name, func_param_length, func_arg_length))
+
+                for idx, param in enumerate(func.params):
+                    if not param:
+                        continue
+                    # print("idx: {}, param: {}, args: {}".format(idx, param.value, node.args[idx].value))
+                    self.visit(VarDeclaration(param.value, node.args[idx]))
+
                 self.visit(func.body)
+
+                for idx, param in enumerate(func.params):
+                    if not param:
+                        continue
+                    self.current_scope.remove(param.value)
             return NoOp()
             
 
