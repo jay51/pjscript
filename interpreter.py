@@ -1,3 +1,6 @@
+from collections import OrderedDict
+
+
 example = """
 /* comment
 
@@ -14,12 +17,22 @@ log(x);
 */
 
 
-function sayHi(){
+var x = "hello world";
 
+function hi(){
     log(x);
 };
 
+function sayHi(){
+
+    var x = "sayHiworld";
+    hi();
+    hi();
+};
+
+
 sayHi();
+log(x);
 
 """
 
@@ -360,14 +373,18 @@ class Parser():
     def statement(self):
         if self.curr_token.type == Tokens.var:
             node = self.var_declaration()
+            return node
         elif self.curr_token.type == Tokens.IDENTIFIER:
             node = self.id()
+            return node
         elif self.curr_token.type == Tokens.function:
             node = self.func_declaration()
-
+            return node
         elif self.curr_token.type == Tokens.EOF:
-            return NoOp()
-        return node
+            node = NoOp()
+            return node
+
+        return NoOp()
         
         
     def var_declaration(self):
@@ -394,7 +411,7 @@ class Parser():
         body = [self.statement()]
         while(self.curr_token.type == Tokens.SEMI):
             self.consume(Tokens.SEMI)
-            body.append(self.statement)
+            body.append(self.statement()) # FIX: when <stmt> then <;> then <}>
 
         self.consume(Tokens.RCURLY)
         return FuncDeclaration(name, params, body)
@@ -462,6 +479,42 @@ class Parser():
         return program
         
         
+
+
+class SymbolTable():
+    def __init__(self, func_name, level, parent_scope):
+        self.func_name = func_name
+        self.level = level
+        self.parent_scope = parent_scope
+        self.table = OrderedDict()
+
+
+    def __str__(self):
+        return """
+        name: {}
+        level: {}
+        parent_scope: {}
+        table: {}
+        """.format(self.func_name, self.level, self.parent_scope, self.table)
+
+
+    def insert(self, name, value):
+        self.table[name] = value
+
+
+    def get(self, name):
+        value = self.table.get(name)
+        if value:
+            return value
+
+        if self.level == 1:
+            return None
+
+        return self.parent_scope.get(name)
+
+
+
+
 # interpreter
 class NodeVisiter():
     def visit(self, node):
@@ -494,7 +547,7 @@ class BuiltIn():
 
 class Interpreter(NodeVisiter):
     def __init__(self, tree):
-        self.symbol_table = dict()
+        self.current_scope = SymbolTable("global", 1, None)
         self.tree = tree
         
     def error(self, val):
@@ -511,34 +564,42 @@ class Interpreter(NodeVisiter):
                 arguments.append(self.visit(param))
             return function(*arguments)
         else:
+
+            func = self.current_scope.get(node.identifier)
+            if func:
+                self.current_scope = SymbolTable(node.identifier, self.current_scope.level+1, self.current_scope)
+                for stmt in func.body:
+                    self.visit(stmt)
+                # print(self.current_scope)
+                self.current_scope = self.current_scope.parent_scope
             return NoOp()
             
 
     def visit_VarDeclaration(self, node):
         name = node.left
         value = self.visit(node.right)
-        self.symbol_table[name] = value
+        self.current_scope.insert(name, value)
         return name
 
 
     def visit_FuncDeclaration(self, node):
-        self.symbol_table[node.name] = node
+        self.current_scope.insert(node.name, node)
         return node.name
 
 
     # THIS IS FOR REASSIGNMENT
     def visit_Assignment(self, node):
-        if self.symbol_table.get(node.left):
+        if self.current_scope.get(node.left):
             name = node.left
             value = self.visit(node.right)
-            self.symbol_table[name] = value
+            self.current_scope(name, value)
             return name
         else:
             self.error(node.left)
 
 
     def visit_Identifier(self, node):
-        value = self.symbol_table.get(node.value)
+        value = self.current_scope.get(node.value)
         if value is None:
             self.error(node.value)
         return value
@@ -560,9 +621,8 @@ class Interpreter(NodeVisiter):
         body = self.tree.body
         for node in body:
             self.visit(node)
-            
-            
-            
+
+
 lexer = Lexer(example)
 parser = Parser(lexer)
 # THIS WILL SHOW YOU TOP LEVE OF TREE
@@ -570,8 +630,9 @@ parser = Parser(lexer)
 # for node in parser.parse().body:
     # print(node)
     #node_visiter.visit(node.type)
-    
-    
+
+
+
 tree = parser.parse()
 interpreter = Interpreter(tree)
 interpreter.interpret()
