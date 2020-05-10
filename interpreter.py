@@ -12,6 +12,15 @@ log(1, "it's working fuck yea", name);
 var x = add(age, add(2,3));
 log(x);
 */
+
+
+function sayHi(){
+
+    log(x);
+};
+
+sayHi();
+
 """
 
 class Tokens():
@@ -22,6 +31,8 @@ class Tokens():
     COMMA       = ","
     LPAREN      = "("
     RPAREN      = ")"
+    LCURLY      = "{"
+    RCURLY      = "}"
     SEMI        = ";"
     ASSIGN      = "="
     EOF         = "EOF"
@@ -31,6 +42,7 @@ class Tokens():
     IDENTIFIER  = "IDENTIFIER"
     # RESERVED_KEYWORDS
     var         = "var"
+    function    = "function"
     
     
 class Token():
@@ -143,12 +155,22 @@ class Lexer():
             if self.curr_char == Tokens.COMMA:
                 self.advance()
                 return Token(Tokens.COMMA, Tokens.COMMA)
+
             if self.curr_char == Tokens.LPAREN:
                 self.advance()
                 return Token(Tokens.LPAREN, Tokens.LPAREN)
             if self.curr_char == Tokens.RPAREN:
                 self.advance()
                 return Token(Tokens.RPAREN, Tokens.RPAREN)
+
+            if self.curr_char == Tokens.LCURLY:
+                self.advance()
+                return Token(Tokens.LCURLY, Tokens.LCURLY)
+
+            if self.curr_char == Tokens.RCURLY:
+                self.advance()
+                return Token(Tokens.RCURLY, Tokens.RCURLY)
+
             if self.curr_char == Tokens.PLUS:
                 self.advance()
                 return Token(Tokens.PLUS, Tokens.PLUS)
@@ -269,6 +291,18 @@ class VarDeclaration():
     __repr__ = __str__
     
 
+class FuncDeclaration():
+    def __init__(self, name, params, body):
+        self.name = name
+        self.params = params
+        self.body = body
+
+    def __str__(self):
+        return "FuncDeclaration<{} : {} >".format(self.params, self.body)
+
+    __repr__ = __str__
+
+
 
 class Assignment():
     def __init__(self, left, right):
@@ -303,7 +337,7 @@ class Parser():
         
         
     def error(self, token):
-        raise Exception("token {} not equal,".format(token))
+        raise Exception("token {} not equal, {}".format(token, self.curr_token))
         
         
     def consume(self, type):
@@ -328,6 +362,9 @@ class Parser():
             node = self.var_declaration()
         elif self.curr_token.type == Tokens.IDENTIFIER:
             node = self.id()
+        elif self.curr_token.type == Tokens.function:
+            node = self.func_declaration()
+
         elif self.curr_token.type == Tokens.EOF:
             return NoOp()
         return node
@@ -340,7 +377,29 @@ class Parser():
         self.consume(Tokens.ASSIGN)
         right = self.expression()
         return VarDeclaration(left, right)
+
         
+    def func_declaration(self):
+        self.consume(Tokens.function)
+        name  = self.curr_token.value
+        self.consume(Tokens.IDENTIFIER)
+        self.consume(Tokens.LPAREN)
+        params = [self.expression()]
+        while(self.curr_token.type == Tokens.COMMA):
+            self.consume(Tokens.COMMA)
+            params.append(self.expression())
+
+        self.consume(Tokens.RPAREN)
+        self.consume(Tokens.LCURLY)
+        body = [self.statement()]
+        while(self.curr_token.type == Tokens.SEMI):
+            self.consume(Tokens.SEMI)
+            body.append(self.statement)
+
+        self.consume(Tokens.RCURLY)
+        return FuncDeclaration(name, params, body)
+
+
 
     def id(self):
         token = self.curr_token
@@ -354,7 +413,6 @@ class Parser():
 
         # variable
         return Identifier(token)
-    
 
 
     def var_assigne(self, token):
@@ -362,7 +420,6 @@ class Parser():
         self.consume(Tokens.ASSIGN)
         right = self.expression()
         return Assignment(left, right)
-        
         
     
     def function_call(self, token):
@@ -464,6 +521,11 @@ class Interpreter(NodeVisiter):
         return name
 
 
+    def visit_FuncDeclaration(self, node):
+        self.symbol_table[node.name] = node
+        return node.name
+
+
     # THIS IS FOR REASSIGNMENT
     def visit_Assignment(self, node):
         if self.symbol_table.get(node.left):
@@ -505,8 +567,8 @@ lexer = Lexer(example)
 parser = Parser(lexer)
 # THIS WILL SHOW YOU TOP LEVE OF TREE
 #node_visiter = NodeVisiter()
-#for node in parser.parse().body:
-    #print(node)
+# for node in parser.parse().body:
+    # print(node)
     #node_visiter.visit(node.type)
     
     
