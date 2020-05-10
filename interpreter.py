@@ -1,6 +1,5 @@
 from collections import OrderedDict
 
-
 example = """
 /* comment
 
@@ -26,6 +25,7 @@ function hi(){
 function sayHi(){
 
     var x = "sayHiworld";
+    log(x);
     hi();
     hi();
 };
@@ -264,7 +264,8 @@ identifier: [a-zA-Z][a-zA-Z0-9_]
 
 
 class Program():
-    def __init__(self, body):
+    def __init__(self, body, scope=None):
+        self.scope = scope
         self.body = body
         
         
@@ -360,13 +361,13 @@ class Parser():
             self.error(type)
             
             
-    def program(self):
+    def program(self, scope):
         body = []
         body.append(self.statement())
         while(self.curr_token.type == Tokens.SEMI):
             self.consume(Tokens.SEMI)
             body.append(self.statement())
-        return Program(body)
+        return Program(body, scope)
         
         
         
@@ -408,10 +409,7 @@ class Parser():
 
         self.consume(Tokens.RPAREN)
         self.consume(Tokens.LCURLY)
-        body = [self.statement()]
-        while(self.curr_token.type == Tokens.SEMI):
-            self.consume(Tokens.SEMI)
-            body.append(self.statement()) # FIX: when <stmt> then <;> then <}>
+        body = self.program(name)
 
         self.consume(Tokens.RCURLY)
         return FuncDeclaration(name, params, body)
@@ -475,7 +473,7 @@ class Parser():
         return Num(token)
         
     def parse(self):
-        program = self.program()
+        program = self.program("global")
         return program
         
         
@@ -547,12 +545,23 @@ class BuiltIn():
 
 class Interpreter(NodeVisiter):
     def __init__(self, tree):
-        self.current_scope = SymbolTable("global", 1, None)
+        # self.current_scope = SymbolTable("global", 1, None)
+        self.current_scope = None
         self.tree = tree
         
     def error(self, val):
         raise Exception("var {} not defined".format(val))
         
+    def visit_Program(self, node):
+
+        level = self.current_scope.level+1 if self.current_scope else 1
+        self.current_scope = SymbolTable(node.scope, level, self.current_scope)
+        for stmt in node.body:
+            self.visit(stmt)
+
+        self.current_scope = self.current_scope.parent_scope
+
+
     def visit_CallExpression(self, node):
         args = node.args
         function = node.identifier
@@ -567,11 +576,7 @@ class Interpreter(NodeVisiter):
 
             func = self.current_scope.get(node.identifier)
             if func:
-                self.current_scope = SymbolTable(node.identifier, self.current_scope.level+1, self.current_scope)
-                for stmt in func.body:
-                    self.visit(stmt)
-                # print(self.current_scope)
-                self.current_scope = self.current_scope.parent_scope
+                self.visit(func.body)
             return NoOp()
             
 
@@ -618,9 +623,7 @@ class Interpreter(NodeVisiter):
         
         
     def interpret(self):
-        body = self.tree.body
-        for node in body:
-            self.visit(node)
+        self.visit(self.tree)
 
 
 lexer = Lexer(example)
