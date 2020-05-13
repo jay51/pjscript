@@ -254,14 +254,22 @@ VarDeclaration, # var name = "jack";
 
 
 
-Var_assigne, # var name = "jack";
+Var_assigne, # name = "jack";
     left: id
     right: expression
 
 
-expression: String
-            | Num
-            | id
+expression: term ((+ | -) term)*
+
+term: factor ((* | /) factor)*
+
+factor: String
+        | Num
+        | id
+        | + factor
+        | - factor
+        | "(" expression ")"
+
 
 
 id: CallExpression
