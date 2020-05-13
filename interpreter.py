@@ -13,7 +13,7 @@ log(1, "it's working fuck yea", name);
 
 var x = add(age, add(2,3));
 log(x);
-*/
+
 
 
 var x = "hello world";
@@ -32,6 +32,14 @@ function sayHi(){
 
 sayHi();
 log(x);
+*/
+
+
+
+var x = 0 + add(2, 3);
+var x = x + add(2, 3);
+var x = (x * 2) / 2;
+log(x); /* should log 10*/
 
 """
 
@@ -39,6 +47,7 @@ class Tokens():
     PLUS        = "+"
     MINUS       = "-"
     MUL         = "*"
+    DIV         = "/"
     COMMENT     = "/*"
     COMMA       = ","
     LPAREN      = "("
@@ -192,6 +201,9 @@ class Lexer():
             if self.curr_char == Tokens.MUL:
                 self.advance()
                 return Token(Tokens.MUL, Tokens.MUL)
+            if self.curr_char == Tokens.DIV:
+                self.advance()
+                return Token(Tokens.DIV, Tokens.DIV)
             if self.curr_char == Tokens.SEMI:
                 self.advance()
                 return Token(Tokens.SEMI, Tokens.SEMI)
@@ -209,7 +221,7 @@ class Lexer():
         
         
 # THIS WILL SHOW YOU THE TOKENS
-# lexer = Lexer(example)
+lexer = Lexer(example)
 # for token in lexer:
     # print(token)
     
@@ -274,11 +286,21 @@ class Num():
         self.token = token
         self.value = token.value
         
+    def __str__(self):
+        return "<{} : {}>".format(self.__class__.__name__, self.value)
+
+    __repr__ = __str__
+
         
 class String():
     def __init__(self, token):
         self.token = token
         self.value = token.value
+
+    def __str__(self):
+        return "<{} : {}>".format(self.__class__.__name__, self.value)
+
+    __repr__ = __str__
 
 
 class Identifier():
@@ -299,7 +321,7 @@ class VarDeclaration():
         self.right = right
 
     def __str__(self):
-        return "VarDeclaration<{} : {}  -> {}>".format(self.left, self.right.__class__.__name__, self.right.value)
+        return "VarDeclaration<{} : {}  -> {}>".format(self.left, self.right.__class__.__name__, self.right)
 
     __repr__ = __str__
     
@@ -339,6 +361,30 @@ class CallExpression():
     
     
     
+class BinOp():
+    def __init__(self, left,  op, right):
+        self.left = left
+        self.op = op
+        self.right = right
+
+    def __str__(self):
+        return "BinOp( {} {} {})".format(self.left, self.op, self.right)
+
+    __repr__ = __str__
+
+
+class UnaryOp():
+    def __init__(self, op, expr):
+        self.expr = expr
+        self.op = op
+
+    def __str__(self):
+        return "UnaryOp( {} {} )".format(self.op, self.expr)
+
+    __repr__ = __str__
+
+
+
 class NoOp():
     pass
     
@@ -450,17 +496,63 @@ class Parser():
         return CallExpression(token.value, args)
         
         
-    def expression(self):
-        if self.curr_token.type == Tokens.STRING:
+    def factor(self):
+        token = self.curr_token
+
+        if token.type == Tokens.STRING:
             return self.parse_string()
-        elif self.curr_token.type == Tokens.NUMBER:
-            return self.parse_number()
-        elif self.curr_token.type == Tokens.IDENTIFIER:
+        elif token.type == Tokens.IDENTIFIER:
             return self.id()
+        elif token.type == Tokens.NUMBER:
+            return self.parse_number()
+        elif token.type == Tokens.PLUS:
+            self.consume(Tokens.PLUS)
+            node = UnaryOp(token, self.factor())
+            return node
+        elif token.type == Tokens.MINUS:
+            self.consume(Tokens.MINUS)
+            node = UnaryOp(token, self.factor())
+            return node
+        elif token.type == Tokens.LPAREN:
+            self.consume(Tokens.LPAREN)
+            node = self.expression()
+            self.consume(Tokens.RPAREN)
+            return node
+
         # print("not considerd", self.curr_token.type)
         # return NoOp()
         
         
+    def term(self):
+        node = self.factor()
+
+        while(self.curr_token.type in (Tokens.MUL, Tokens.DIV)):
+            token = self.curr_token
+            if token.type == Tokens.MUL:
+                self.consume(Tokens.MUL)
+            if token.type == Tokens.DIV:
+                self.consume(Tokens.DIV)
+
+            node = BinOp(left=node, op=token, right=self.factor())
+        return node
+
+
+
+    def expression(self):
+        node = self.term()
+        while(self.curr_token.type in (Tokens.PLUS, Tokens.MINUS)):
+            token = self.curr_token
+            if token.type == Tokens.PLUS:
+                self.consume(Tokens.PLUS)
+            if token.type == Tokens.MINUS:
+                self.consume(Tokens.MINUS)
+
+            node = BinOp(left=node, op=token, right=self.term())
+        return node
+
+
+
+
     def parse_string(self):
         token = self.curr_token
         self.consume(Tokens.STRING)
@@ -505,7 +597,7 @@ class SymbolTable():
 
     def get(self, name):
         value = self.table.get(name)
-        if value:
+        if value is not None:
             return value
 
         if self.level == 1:
@@ -611,6 +703,23 @@ class Interpreter(NodeVisiter):
         return node.name
 
 
+    def visit_BinOp(self, node):
+        if node.op.type == Tokens.PLUS:
+            return self.visit(node.left) + self.visit(node.right)
+        if node.op.type == Tokens.MINUS:
+            return self.visit(node.left) - self.visit(node.right)
+        if node.op.type == Tokens.MUL:
+            return self.visit(node.left) * self.visit(node.right)
+        if node.op.type == Tokens.DIV:
+            return self.visit(node.left) // self.visit(node.right)
+
+
+    def visit_UnaryOp(self, node):
+        if node.op.type == Tokens.PLUS:
+            return +self.visit(node.expr)
+        if node.op.type == Tokens.MINUS:
+            return -self.visit(node.expr)
+
     # THIS IS FOR REASSIGNMENT
     def visit_Assignment(self, node):
         if self.current_scope.get(node.left):
@@ -648,7 +757,7 @@ class Interpreter(NodeVisiter):
 lexer = Lexer(example)
 parser = Parser(lexer)
 # THIS WILL SHOW YOU TOP LEVE OF TREE
-#node_visiter = NodeVisiter()
+# node_visiter = NodeVisiter()
 # for node in parser.parse().body:
     # print(node)
     #node_visiter.visit(node.type)
