@@ -32,14 +32,19 @@ function sayHi(){
 
 sayHi();
 log(x);
-*/
 
 
 
 var x = 0 + add(2, 3);
 var x = x + add(2, 3);
+
 var x = (x * 2) / 2;
 log(x); /* should log 10*/
+*/
+
+
+log("yes");
+
 
 """
 
@@ -121,8 +126,13 @@ class Lexer():
         # skip "/*"
         self.advance()
         self.advance()
-        while(self.curr_char != "*" and self.peek() != "/"):
-            self.advance()
+        while(True):
+            if self.curr_char == "*" and self.peek() == "/":
+                break
+            elif self.curr_char == "/" and self.peek() == "*":
+                self.skip_comment()
+            else:
+                self.advance()
         # skip "*/"
         self.advance()
         self.advance()
