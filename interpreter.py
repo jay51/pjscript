@@ -43,8 +43,14 @@ log(x); /* should log 10*/
 */
 
 
-log("yes");
 
+function Mul(){
+    log(1 * 2);
+};
+
+
+var result = Mul();
+log(result);
 
 """
 
@@ -259,13 +265,18 @@ CallExpression
 
 VarDeclaration, # var name = "jack";
     type: var
-    left: id
+    left: identifier
     right: expression
 
 
+FuncDeclaration, # function name(){};
+    name: identifier
+    params: [identifier*]
+    body: Program
+
 
 Var_assigne, # name = "jack";
-    left: id
+    left: identifier
     right: expression
 
 
@@ -274,11 +285,13 @@ expression: term ((+ | -) term)*
 term: factor ((* | /) factor)*
 
 factor: String
+        | STRING
         | Num
         | id
         | + factor
         | - factor
         | "(" expression ")"
+        | None
 
 
 
@@ -297,8 +310,12 @@ class Program():
         self.scope = scope
         self.body = body
         
+    def __str__(self):
+        return "<{} : {}>".format(self.__class__.__name__, self.body)
         
+    __repr__ = __str__
         
+
 class Num():
     def __init__(self, token):
         self.token = token
@@ -539,6 +556,7 @@ class Parser():
 
         # print("not considerd", self.curr_token.type)
         # return NoOp()
+        return None
         
         
     def term(self):
@@ -678,7 +696,7 @@ class Interpreter(NodeVisiter):
     def visit_CallExpression(self, node):
         args = node.args
         function = node.identifier
-        # we support only the log function right now
+        # we support only the log and add function right now
         if getattr(BuiltIn, function, None):
             function = getattr(BuiltIn, function)
             arguments = []
@@ -706,7 +724,7 @@ class Interpreter(NodeVisiter):
                     if not param:
                         continue
                     self.current_scope.remove(param.value)
-            return NoOp()
+            return "not implemented yet"
             
 
     def visit_VarDeclaration(self, node):
