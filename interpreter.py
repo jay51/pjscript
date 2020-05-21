@@ -45,7 +45,8 @@ log(x); /* should log 10*/
 
 
 function Mul(){
-    log(1 * 2);
+    log(2 * 2);
+    return add(2, add(2 * 3, 2));
 };
 
 
@@ -73,8 +74,9 @@ class Tokens():
     NUMBER      = "NUMBER"
     IDENTIFIER  = "IDENTIFIER"
     # RESERVED_KEYWORDS
-    var         = "var"
-    function    = "function"
+    _var         = "var"
+    _function    = "function"
+    _return      = "return"
     
     
 class Token():
@@ -174,8 +176,8 @@ class Lexer():
             id += self.curr_char
             self.advance()
 
-        if hasattr(Tokens, id):
-            token_type = getattr(Tokens, id) # RESERVED_KEYWORDS (var, log)
+        if hasattr(Tokens, "_" + id):
+            token_type = getattr(Tokens, "_" + id) # RESERVED_KEYWORDS (var, log)
             return Token(token_type, id)
         else:
             return Token(Tokens.IDENTIFIER, id)
@@ -419,6 +421,15 @@ class UnaryOp():
     __repr__ = __str__
 
 
+class ReturnStmt():
+    def __init__(self, expr):
+        self.expr = expr
+
+    def __str__(self):
+        return "Return( {} )".format(self.expr)
+
+    __repr__ = __str__
+
 
 class NoOp():
     pass
@@ -452,14 +463,17 @@ class Parser():
         
         
     def statement(self):
-        if self.curr_token.type == Tokens.var:
+        if self.curr_token.type == Tokens._var:
             node = self.var_declaration()
             return node
         elif self.curr_token.type == Tokens.IDENTIFIER:
             node = self.id()
             return node
-        elif self.curr_token.type == Tokens.function:
+        elif self.curr_token.type == Tokens._function:
             node = self.func_declaration()
+            return node
+        elif self.curr_token.type == Tokens._return:
+            node = self.return_stmt()
             return node
         elif self.curr_token.type == Tokens.EOF:
             node = NoOp()
@@ -469,7 +483,7 @@ class Parser():
         
         
     def var_declaration(self):
-        self.consume(Tokens.var)
+        self.consume(Tokens._var)
         left = self.curr_token.value
         self.consume(Tokens.IDENTIFIER)
         self.consume(Tokens.ASSIGN)
@@ -478,7 +492,7 @@ class Parser():
 
         
     def func_declaration(self):
-        self.consume(Tokens.function)
+        self.consume(Tokens._function)
         name  = self.curr_token.value
         self.consume(Tokens.IDENTIFIER)
         self.consume(Tokens.LPAREN)
@@ -493,6 +507,12 @@ class Parser():
 
         self.consume(Tokens.RCURLY)
         return FuncDeclaration(name, params, body)
+
+
+    def return_stmt(self):
+        self.consume(Tokens._return)
+        expr = self.expression()
+        return ReturnStmt(expr)
 
 
 
@@ -688,7 +708,10 @@ class Interpreter(NodeVisiter):
         level = self.current_scope.level+1 if self.current_scope else 1
         self.current_scope = SymbolTable(node.scope, level, self.current_scope)
         for stmt in node.body:
-            self.visit(stmt)
+            if isinstance(stmt, ReturnStmt):
+                return self.visit(stmt)
+            else:
+                self.visit(stmt)
 
         self.current_scope = self.current_scope.parent_scope
 
@@ -703,8 +726,8 @@ class Interpreter(NodeVisiter):
             for param in args:
                 arguments.append(self.visit(param))
             return function(*arguments)
-        else:
 
+        else:
             func = self.current_scope.get(node.identifier)
             if func:
                 func_param_length = len(func.params)
@@ -718,13 +741,13 @@ class Interpreter(NodeVisiter):
                     # print("idx: {}, param: {}, args: {}".format(idx, param.value, node.args[idx].value))
                     self.visit(VarDeclaration(param.value, node.args[idx]))
 
-                self.visit(func.body)
+                ret_node = self.visit(func.body)
 
                 for idx, param in enumerate(func.params):
                     if not param:
                         continue
                     self.current_scope.remove(param.value)
-            return "not implemented yet"
+            return ret_node
             
 
     def visit_VarDeclaration(self, node):
@@ -737,6 +760,10 @@ class Interpreter(NodeVisiter):
     def visit_FuncDeclaration(self, node):
         self.current_scope.insert(node.name, node)
         return node.name
+
+
+    def visit_ReturnStmt(self, node):
+        return self.visit(node.expr)
 
 
     def visit_BinOp(self, node):
