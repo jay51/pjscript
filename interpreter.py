@@ -260,6 +260,15 @@ Program
     body: [Statement*]
 
 
+Statement:
+        | CallExpression
+        | VarDeclaration
+        | Var_assigne
+        | FuncDeclaration
+        | Return
+        | NoOp
+
+
 CallExpression
     callee: id
     args: []
@@ -281,6 +290,9 @@ Var_assigne, # name = "jack";
     left: identifier
     right: expression
 
+
+Return: # return 2 * add(2, 2)
+    expr: expression
 
 expression: term ((+ | -) term)*
 
