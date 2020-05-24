@@ -1,61 +1,19 @@
 from collections import OrderedDict
 
 example = """
-/* comment
 
-var age = 2;
-var name = "jack";
+var x = 2;
+log("x: ", x);
 
-var newage = age;
-name = "jack and me";
-
-log(1, "it's working fuck yea", name);
-
-var x = add(age, add(2,3));
-log(x);
-
-
-
-var x = "hello world";
-
-function hi(st1, st2, st3){
-    log(st1);
-    log(st2);
-    log(st3);
-};
-
-
-function sayHi(){
-    hi("somthing", 1, 3);
-};
-
-
-sayHi();
-log(x);
-
-
-
-var x = 0 + add(2, 3);
-var x = x + add(2, 3);
-
-var x = (x * 2) / 2;
-log(x); /* should log 10*/
-*/
-
-
-
-function Mul(){
-    log(2 * 2);
-    return add(2, add(2 * 3, 2));
-};
-
-
-var result = Mul();
-log(result);
+var y = x++ * 2;
+log("y: ", y);
+log("x: ", x);
 
 """
 
 class Tokens():
+    PLUSPLUS    = "++"
+    MINUSMINUS  = "--"
     PLUS        = "+"
     MINUS       = "-"
     MUL         = "*"
@@ -189,8 +147,10 @@ class Lexer():
             if self.curr_char.isspace() :
                 self.skip_whitespace()
                 continue
+
             if self.curr_char == "/" and self.peek() == "*":
                 self.skip_comment()
+
             if self.curr_char == Tokens.COMMA:
                 self.advance()
                 return Token(Tokens.COMMA, Tokens.COMMA)
@@ -198,6 +158,7 @@ class Lexer():
             if self.curr_char == Tokens.LPAREN:
                 self.advance()
                 return Token(Tokens.LPAREN, Tokens.LPAREN)
+
             if self.curr_char == Tokens.RPAREN:
                 self.advance()
                 return Token(Tokens.RPAREN, Tokens.RPAREN)
@@ -210,29 +171,47 @@ class Lexer():
                 self.advance()
                 return Token(Tokens.RCURLY, Tokens.RCURLY)
 
+            if self.curr_char == Tokens.PLUS and self.peek() == Tokens.PLUS:
+                self.advance()
+                self.advance()
+                return Token(Tokens.PLUSPLUS, Tokens.PLUSPLUS)
+
+            if self.curr_char == Tokens.MINUS and self.peek() == Tokens.MINUS:
+                self.advance()
+                self.advance()
+                return Token(Tokens.MINUSMINUS, Tokens.MINUSMINUS)
+
             if self.curr_char == Tokens.PLUS:
                 self.advance()
                 return Token(Tokens.PLUS, Tokens.PLUS)
+
             if self.curr_char == Tokens.MINUS:
                 self.advance()
                 return Token(Tokens.MINUS, Tokens.MINUS)
+
             if self.curr_char == Tokens.MUL:
                 self.advance()
                 return Token(Tokens.MUL, Tokens.MUL)
+
             if self.curr_char == Tokens.DIV:
                 self.advance()
                 return Token(Tokens.DIV, Tokens.DIV)
+
             if self.curr_char == Tokens.SEMI:
                 self.advance()
                 return Token(Tokens.SEMI, Tokens.SEMI)
+
             if self.curr_char == Tokens.ASSIGN:
                 self.advance()
                 return Token(Tokens.ASSIGN, Tokens.ASSIGN)
+
             if self.curr_char and self.curr_char.isalpha():
                 return self.identifier()
+
             if self.curr_char == "\"":
                 self.advance()
                 return self.collect_string()
+
             if self.curr_char and self.curr_char.isdigit():
                 return self.collect_number()
         return Token(Tokens.EOF, Tokens.EOF)
@@ -422,6 +401,28 @@ class BinOp():
     __repr__ = __str__
 
 
+class PostIncDecOp():
+    def __init__(self, left, op):
+        self.left = left
+        self.op = op
+
+    def __str__(self):
+        return "PostIncDecOp( {} {} )".format(self.left, self.op)
+
+    __repr__ = __str__
+
+
+class PreIncDecOp():
+    def __init__(self, left, op):
+        self.left = left
+        self.op = op
+
+    def __str__(self):
+        return "PreIncDecOp( {} {} )".format(self.left, self.op)
+
+    __repr__ = __str__
+
+
 class UnaryOp():
     def __init__(self, op, expr):
         self.expr = expr
@@ -568,31 +569,63 @@ class Parser():
 
         if token.type == Tokens.STRING:
             return self.parse_string()
+
         elif token.type == Tokens.IDENTIFIER:
             return self.id()
+
         elif token.type == Tokens.NUMBER:
             return self.parse_number()
+
         elif token.type == Tokens.PLUS:
             self.consume(Tokens.PLUS)
             node = UnaryOp(token, self.factor())
             return node
+
         elif token.type == Tokens.MINUS:
             self.consume(Tokens.MINUS)
             node = UnaryOp(token, self.factor())
             return node
+
         elif token.type == Tokens.LPAREN:
             self.consume(Tokens.LPAREN)
             node = self.expression()
             self.consume(Tokens.RPAREN)
             return node
 
+        elif token.type == Tokens.PLUSPLUS:
+            self.consume(Tokens.PLUSPLUS)
+            node = PreIncDecOp(self.factor(), token)
+            return node
+
+        elif token.type == Tokens.MINUSMINUS:
+            self.consume(Tokens.MINUSMINUS)
+            node = PreIncDecOp(self.factor(), token)
+            return node
+
         # print("not considerd", self.curr_token.type)
         # return NoOp()
         return None
         
-        
-    def term(self):
+
+
+    def atom(self):
         node = self.factor()
+        while(self.curr_token.type in (Tokens.PLUSPLUS, Tokens.MINUSMINUS)):
+            token = self.curr_token
+            if token.type == Tokens.PLUSPLUS:
+                self.consume(Tokens.PLUSPLUS)
+
+            if token.type == Tokens.MINUSMINUS:
+                self.consume(Tokens.MINUSMINUS)
+
+            node = PostIncDecOp(node, token)
+
+        return node
+
+        
+
+    def term(self):
+        node = self.atom()
 
         while(self.curr_token.type in (Tokens.MUL, Tokens.DIV)):
             token = self.curr_token
@@ -789,6 +822,20 @@ class Interpreter(NodeVisiter):
             return self.visit(node.left) // self.visit(node.right)
 
 
+    def visit_PostIncDecOp(self, node):
+        value = self.current_scope.get(node.left.value)
+        new_value = value + 1 if node.op.type == Tokens.PLUSPLUS else value - 1
+        self.current_scope.insert(node.left.value, new_value)
+        return value
+
+
+    def visit_PreIncDecOp(self, node):
+        value = self.current_scope.get(node.left.value)
+        new_value = value + 1 if node.op.type == Tokens.PLUSPLUS else value - 1
+        self.current_scope.insert(node.left.value, new_value)
+        return new_value
+
+
     def visit_UnaryOp(self, node):
         if node.op.type == Tokens.PLUS:
             return +self.visit(node.expr)
@@ -800,7 +847,7 @@ class Interpreter(NodeVisiter):
         if self.current_scope.get(node.left):
             name = node.left
             value = self.visit(node.right)
-            self.current_scope(name, value)
+            self.current_scope.insert(name, value)
             return name
         else:
             self.error(node.left)

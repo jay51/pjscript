@@ -28,12 +28,12 @@ function printme(st1, st2, st3){
     log(st3);
 };
 
-function test_func(){
-    var x = "new thing"
+function testfunc(){
+    var x = "new thing";
     printme(x, 1, 3);
 };
 
-test_func();
+testfunc();
 log(x);
 ```
 
@@ -52,5 +52,21 @@ function Mul(){
 var result = Mul();
 log(result);
 
+
+/* post-increment and decrement */
+var x = 2;
+log("x: ", x);
+
+var y = x++ * 2;
+log("y: ", y); /* output y: 4 */
+log("x: ", x); /* output y: 3 */
+
+/* pre-increment and decrement */
+var x = 2;
+log("x: ", x);
+
+var y = ++x * 2;
+log("y: ", y);/* output y: 6 */
+log("x: ", x);/* output y: 3 */
 ```
 
