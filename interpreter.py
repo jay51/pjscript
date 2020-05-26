@@ -5,7 +5,7 @@ example = """
 var x = 2;
 log("x: ", x);
 
-var y = x++ * 2;
+var y = x != 2;
 log("y: ", y);
 log("x: ", x);
 
@@ -18,6 +18,13 @@ class Tokens():
     MINUS       = "-"
     MUL         = "*"
     DIV         = "/"
+    GT          = ">"
+    LT          = "<"
+    GTE         = ">="
+    LTE         = "<="
+    EQUALEQUAL  = "=="
+    NOTEQUAL    = "!="
+    NOT         = "!"
     COMMENT     = "/*"
     COMMA       = ","
     LPAREN      = "("
@@ -25,7 +32,7 @@ class Tokens():
     LCURLY      = "{"
     RCURLY      = "}"
     SEMI        = ";"
-    ASSIGN      = "="
+    EQUAL       = "="
     EOF         = "EOF"
     ID          = "ID"
     STRING      = "STRING"
@@ -197,13 +204,41 @@ class Lexer():
                 self.advance()
                 return Token(Tokens.DIV, Tokens.DIV)
 
+            if self.curr_char == Tokens.GT and self.peek() == Tokens.EQUAL:
+                self.advance()
+                self.advance()
+                return Token(Tokens.GTE, Tokens.GTE)
+
+            if self.curr_char == Tokens.LT and self.peek() == Tokens.EQUAL:
+                self.advance()
+                self.advance()
+                return Token(Tokens.LTE, Tokens.LTE)
+
+            if self.curr_char == Tokens.EQUAL and self.peek() == Tokens.EQUAL:
+                self.advance()
+                self.advance()
+                return Token(Tokens.EQUALEQUAL, Tokens.EQUALEQUAL)
+
+            if self.curr_char == Tokens.NOT and self.peek() == Tokens.EQUAL:
+                self.advance()
+                self.advance()
+                return Token(Tokens.NOTEQUAL, Tokens.NOTEQUAL)
+
+            if self.curr_char == Tokens.GT:
+                self.advance()
+                return Token(Tokens.GT, Tokens.GT)
+
+            if self.curr_char == Tokens.LT:
+                self.advance()
+                return Token(Tokens.LT, Tokens.LT)
+
             if self.curr_char == Tokens.SEMI:
                 self.advance()
                 return Token(Tokens.SEMI, Tokens.SEMI)
 
-            if self.curr_char == Tokens.ASSIGN:
+            if self.curr_char == Tokens.EQUAL:
                 self.advance()
-                return Token(Tokens.ASSIGN, Tokens.ASSIGN)
+                return Token(Tokens.EQUAL, Tokens.EQUAL)
 
             if self.curr_char and self.curr_char.isalpha():
                 return self.identifier()
@@ -499,7 +534,7 @@ class Parser():
         self.consume(Tokens._var)
         left = self.curr_token.value
         self.consume(Tokens.IDENTIFIER)
-        self.consume(Tokens.ASSIGN)
+        self.consume(Tokens.EQUAL)
         right = self.expression()
         return VarDeclaration(left, right)
 
@@ -536,7 +571,7 @@ class Parser():
         if self.curr_token.type == Tokens.LPAREN:
             return self.function_call(token)
 
-        if self.curr_token.type == Tokens.ASSIGN:
+        if self.curr_token.type == Tokens.EQUAL:
             return self.var_assigne(token)
 
         # variable
@@ -545,7 +580,7 @@ class Parser():
 
     def var_assigne(self, token):
         left = token.value
-        self.consume(Tokens.ASSIGN)
+        self.consume(Tokens.EQUAL)
         right = self.expression()
         return Assignment(left, right)
         
@@ -641,12 +676,24 @@ class Parser():
 
     def expression(self):
         node = self.term()
-        while(self.curr_token.type in (Tokens.PLUS, Tokens.MINUS)):
+        while(self.curr_token.type in (Tokens.PLUS, Tokens.MINUS, Tokens.GT, Tokens.LT, Tokens.GTE, Tokens.LTE, Tokens.EQUALEQUAL, Tokens.NOTEQUAL)):
             token = self.curr_token
             if token.type == Tokens.PLUS:
                 self.consume(Tokens.PLUS)
             if token.type == Tokens.MINUS:
                 self.consume(Tokens.MINUS)
+            if token.type == Tokens.GT:
+                self.consume(Tokens.GT)
+            if token.type == Tokens.LT:
+                self.consume(Tokens.LT)
+            if token.type == Tokens.GTE:
+                self.consume(Tokens.GTE)
+            if token.type == Tokens.LTE:
+                self.consume(Tokens.LTE)
+            if token.type == Tokens.EQUALEQUAL:
+                self.consume(Tokens.EQUALEQUAL)
+            if token.type == Tokens.NOTEQUAL:
+                self.consume(Tokens.NOTEQUAL)
 
             node = BinOp(left=node, op=token, right=self.term())
         return node
@@ -820,6 +867,18 @@ class Interpreter(NodeVisiter):
             return self.visit(node.left) * self.visit(node.right)
         if node.op.type == Tokens.DIV:
             return self.visit(node.left) // self.visit(node.right)
+        if node.op.type == Tokens.GT:
+            return self.visit(node.left) > self.visit(node.right)
+        if node.op.type == Tokens.LT:
+            return self.visit(node.left) < self.visit(node.right)
+        if node.op.type == Tokens.GTE:
+            return self.visit(node.left) >= self.visit(node.right)
+        if node.op.type == Tokens.LTE:
+            return self.visit(node.left) >= self.visit(node.right)
+        if node.op.type == Tokens.EQUALEQUAL:
+            return self.visit(node.left) == self.visit(node.right)
+        if node.op.type == Tokens.NOTEQUAL:
+            return self.visit(node.left) != self.visit(node.right)
 
 
     def visit_PostIncDecOp(self, node):

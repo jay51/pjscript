@@ -68,5 +68,13 @@ log("x: ", x);
 var y = ++x * 2;
 log("y: ", y);/* output y: 6 */
 log("x: ", x);/* output y: 3 */
+
+
+/* Comparison Operators */
+
+var x = 2;
+var y = x >= 2;
+log("y: ", y); /* True */
+log("x: ", x); /* 2 */
 ```
 
