@@ -1,3 +1,4 @@
+import sys
 from collections import OrderedDict
 
 example = """
@@ -8,7 +9,6 @@ log("x: ", x);
 var y = x != 2;
 log("y: ", y);
 log("x: ", x);
-
 """
 
 class Tokens():
@@ -63,7 +63,7 @@ class Lexer():
     
     def __init__(self, text):
         self.text = text
-        self.length = len(text) - 1
+        self.length = len(text)
         self.pos = 0
         self.curr_char = self.text[self.pos]
         
@@ -94,7 +94,6 @@ class Lexer():
         return self.text[peek_pos]
         
         
-    # /*comment*/
     def skip_comment(self):
         # skip "/*"
         self.advance()
@@ -249,16 +248,13 @@ class Lexer():
 
             if self.curr_char and self.curr_char.isdigit():
                 return self.collect_number()
+
         return Token(Tokens.EOF, Tokens.EOF)
         
         
-# THIS WILL SHOW YOU THE TOKENS
-lexer = Lexer(example)
-# for token in lexer:
-    # print(token)
     
     
-# parser
+# PARSER
 """
 AST
 Program {
@@ -935,16 +931,29 @@ class Interpreter(NodeVisiter):
         self.visit(self.tree)
 
 
-lexer = Lexer(example)
-parser = Parser(lexer)
-# THIS WILL SHOW YOU TOP LEVE OF TREE
-# node_visiter = NodeVisiter()
-# for node in parser.parse().body:
-    # print(node)
-    #node_visiter.visit(node.type)
+
+def print_tok(lexer, callback=None):
+    for idx, token in enumerate(lexer):
+        print(idx, token)
+        if callback: callback(token)
 
 
+if __name__ == "__main__":
+    lexer = Lexer(example)
+    parser = Parser(lexer)
 
-tree = parser.parse()
-interpreter = Interpreter(tree)
-interpreter.interpret()
+    if len(sys.argv) >= 2:
+        # THIS WILL SHOW YOU THE TOKENS
+        if sys.argv[1] == "-L":
+            print_tok(lexer)
+
+        # THIS WILL SHOW YOU TOP LEVE OF TREE
+        if sys.argv[1] == "-A":
+            for node in parser.parse().body:
+                print(node)
+
+    else:
+
+        tree = parser.parse()
+        interpreter = Interpreter(tree)
+        interpreter.interpret()
