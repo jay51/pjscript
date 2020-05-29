@@ -42,9 +42,9 @@ class Tokens():
     NUMBER      = "NUMBER"
     IDENTIFIER  = "IDENTIFIER"
     # RESERVED_KEYWORDS
-    _var         = "var"
-    _function    = "function"
-    _return      = "return"
+    _var        = "var"
+    _function   = "function"
+    _return     = "return"
 # fmt: on
 
 
@@ -908,21 +908,22 @@ def print_tok(lexer, callback=None):
 
 
 if __name__ == "__main__":
-    lexer = Lexer(example)
-    parser = Parser(lexer)
 
     if len(sys.argv) >= 2:
+        lexer = Lexer(example)
         # THIS WILL SHOW YOU THE TOKENS
         if sys.argv[1] == "-L":
             print_tok(lexer)
 
+        parser = Parser(lexer)
         # THIS WILL SHOW YOU TOP LEVE OF TREE
         if sys.argv[1] == "-A":
             for node in parser.parse().body:
                 print(node)
 
     else:
-
+        lexer = Lexer(example)
+        parser = Parser(lexer)
         tree = parser.parse()
         interpreter = Interpreter(tree)
         interpreter.interpret()
