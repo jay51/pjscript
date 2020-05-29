@@ -3,14 +3,10 @@ from collections import OrderedDict
 
 example = """
 
-function printme(st1, st2, st3){
-    log(st1);
-    log(st2);
-    log(st3);
-    return 1;
+function print5(x){
 };
-var result = printme(1, 2, 3);
-log(result);
+
+print5();
 """
 
 # fmt: off
@@ -45,6 +41,7 @@ class Tokens():
     _var        = "var"
     _function   = "function"
     _return     = "return"
+    _for        = "for"
 # fmt: on
 
 
@@ -387,6 +384,19 @@ class FuncDeclaration:
     __repr__ = __str__
 
 
+class ForLoop:
+    def __init__(self, var_dec, condition, expr, body):
+        self.var = var_dec
+        self.condition = condition
+        self.expr = expr
+        self.body = body
+
+    def __str__(self):
+        return "ForLoop<{} : {} : {} >".format(self.var, self.condition, self.expr)
+
+    __repr__ = __str__
+
+
 class Assignment:
     def __init__(self, left, right):
         self.left = left
@@ -507,6 +517,11 @@ class Parser:
         elif self.curr_token.type == Tokens._return:
             node = self.return_stmt()
             return node
+
+        elif self.curr_token.type == Tokens._for:
+            node = self.for_stmt()
+            return node
+
         elif self.curr_token.type == Tokens.EOF:
             node = NoOp()
             return node
@@ -537,6 +552,20 @@ class Parser:
 
         self.consume(Tokens.RCURLY)
         return FuncDeclaration(name, params, body)
+
+    def for_stmt(self):
+        self.consume(Tokens._for)
+        self.consume(Tokens.LPAREN)
+        var = self.var_declaration()
+        self.consume(Tokens.SEMI)
+        condition = self.expression()
+        self.consume(Tokens.SEMI)
+        expr = self.expression()
+        self.consume(Tokens.RPAREN)
+        self.consume(Tokens.LCURLY)
+        body = self.program("for")
+        self.consume(Tokens.RCURLY)
+        return ForLoop(var, condition, expr, body)
 
     def return_stmt(self):
         self.consume(Tokens._return)
@@ -771,6 +800,15 @@ class Interpreter(NodeVisiter):
             if isinstance(stmt, ReturnStmt):
                 self.current_scope = self.current_scope.parent_scope
                 return self.visit(stmt)
+
+            elif isinstance(stmt, ForLoop):
+                # if node is not None, means forloop's encountered a Return_stmt
+                # and node is what's being or should be returend
+                node = self.visit(stmt)
+                if node is not None:
+                    self.current_scope = self.current_scope.parent_scope
+                    return node
+
             else:
                 self.visit(stmt)
 
@@ -779,10 +817,9 @@ class Interpreter(NodeVisiter):
 
     def visit_CallExpression(self, node):
         args = node.args
-        function = node.identifier
         # we support only the log and add function right now
-        if getattr(BuiltIn, function, None):
-            function = getattr(BuiltIn, function)
+        function = getattr(BuiltIn, node.identifier, None)
+        if function is not None:
             arguments = []
             for param in args:
                 arguments.append(self.visit(param))
@@ -803,8 +840,12 @@ class Interpreter(NodeVisiter):
                 )
 
             for idx, param in enumerate(func.params):
-                if param is None:
-                    print("Warning: param is {} ".format(param))
+                if param is None or node.args[idx] is None:
+                    print(
+                        "Warning: param is {} and arg is {} ".format(
+                            param, node.args[idx]
+                        )
+                    )
                     continue
                 # print("idx: {}, param: {}, args: {}".format(idx, param.value, node.args[idx].value))
                 self.visit(VarDeclaration(param.value, node.args[idx]))
@@ -812,7 +853,7 @@ class Interpreter(NodeVisiter):
             ret_node = self.visit(func.body)
 
             for idx, param in enumerate(func.params):
-                if param is None:
+                if param is None or node.args[idx] is None:
                     continue
                 self.current_scope.remove(param.value)
 
@@ -823,6 +864,18 @@ class Interpreter(NodeVisiter):
         value = self.visit(node.right)
         self.current_scope.insert(name, value)
         return name
+
+    def visit_ForLoop(self, node):
+        # decalare the var first
+        self.visit(node.var)
+        while self.visit(node.condition):
+            ret_node = self.visit(node.body)
+            # if ret_node is not None, means we've returned from function
+            if ret_node is not None:
+                return ret_node
+            self.visit(node.expr)
+
+        return None
 
     def visit_FuncDeclaration(self, node):
         self.current_scope.insert(node.name, node)
