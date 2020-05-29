@@ -3,12 +3,14 @@ from collections import OrderedDict
 
 example = """
 
-var x = 2;
-log("x: ", x);
-
-var y = x != 2;
-log("y: ", y);
-log("x: ", x);
+function printme(st1, st2, st3){
+    log(st1);
+    log(st2);
+    log(st3);
+    return 1;
+};
+var result = printme(1, 2, 3);
+log(result);
 """
 
 # fmt: off
@@ -760,19 +762,20 @@ class Interpreter(NodeVisiter):
         self.tree = tree
 
     def error(self, val):
-        raise Exception("var {} not defined".format(val))
+        raise Exception("identifier {} not defined".format(val))
 
     def visit_Program(self, node):
-
         level = self.current_scope.level + 1 if self.current_scope else 1
         self.current_scope = SymbolTable(node.scope, level, self.current_scope)
         for stmt in node.body:
             if isinstance(stmt, ReturnStmt):
+                self.current_scope = self.current_scope.parent_scope
                 return self.visit(stmt)
             else:
                 self.visit(stmt)
 
         self.current_scope = self.current_scope.parent_scope
+        return None
 
     def visit_CallExpression(self, node):
         args = node.args
@@ -787,28 +790,32 @@ class Interpreter(NodeVisiter):
 
         else:
             func = self.current_scope.get(node.identifier)
-            if func:
-                func_param_length = len(func.params)
-                func_arg_length = len(node.args)
-                if func_param_length != func_arg_length:
-                    raise Exception(
-                        "{} Expectes {} args, but found {} args".format(
-                            func.name, func_param_length, func_arg_length
-                        )
+            if func is None:
+                self.error(node.identifier)
+
+            func_param_length = len(func.params)
+            func_arg_length = len(node.args)
+            if func_param_length != func_arg_length:
+                raise Exception(
+                    "{} Expectes {} args, but found {} args".format(
+                        func.name, func_param_length, func_arg_length
                     )
+                )
 
-                for idx, param in enumerate(func.params):
-                    if not param:
-                        continue
-                    # print("idx: {}, param: {}, args: {}".format(idx, param.value, node.args[idx].value))
-                    self.visit(VarDeclaration(param.value, node.args[idx]))
+            for idx, param in enumerate(func.params):
+                if param is None:
+                    print("Warning: param is {} ".format(param))
+                    continue
+                # print("idx: {}, param: {}, args: {}".format(idx, param.value, node.args[idx].value))
+                self.visit(VarDeclaration(param.value, node.args[idx]))
 
-                ret_node = self.visit(func.body)
+            ret_node = self.visit(func.body)
 
-                for idx, param in enumerate(func.params):
-                    if not param:
-                        continue
-                    self.current_scope.remove(param.value)
+            for idx, param in enumerate(func.params):
+                if param is None:
+                    continue
+                self.current_scope.remove(param.value)
+
             return ret_node
 
     def visit_VarDeclaration(self, node):
