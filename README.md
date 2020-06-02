@@ -1,6 +1,6 @@
-A single file, dependency free language written in python. The goal of this project is to show that 
+A single file, dependency free language written in python. The goal of this project is to show that
 programming languages are not a black box and that you could learn the basic concpets required to implement your own language.
-While this language is not a real programming language however a lot of the internal concepts displayed in this 
+While this language is not a real programming language however a lot of the internal concepts displayed in this
 language is taken from other real programming languages.
 
 ### Basic statemnets
@@ -37,7 +37,7 @@ testfunc();
 log(x);
 ```
 
-### Expressions 
+### Expressions
 ```js
 
 var x = 0 + add(2, 3);
@@ -78,3 +78,23 @@ log("y: ", y); /* True */
 log("x: ", x); /* 2 */
 ```
 
+### For Loops
+
+```js
+for(var i = 0; i < 5; i++){
+
+    log(i);
+};
+
+/* or */
+var i = 0;
+for(i = 2; i < 5; i++){
+    log(i);
+};
+
+/* infinite loop */
+var i = 0;
+for(; ; i++){
+    log(i);
+};
+```
