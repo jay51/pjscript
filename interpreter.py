@@ -4,9 +4,14 @@ from collections import OrderedDict
 example = """
 
 function print5(x){
+
+    var i = 0;
+    for(; i < 5; i++){
+        log(i++);
+    };
 };
 
-print5();
+print5(0);
 """
 
 # fmt: off
@@ -261,6 +266,7 @@ Statement:
         | VarDeclaration
         | Var_assigne
         | FuncDeclaration
+        | ForLoop
         | Return
         | NoOp
 
@@ -292,7 +298,9 @@ Return: # return 2 * add(2, 2)
 
 expression: term ((+ | -) term)*
 
-term: factor ((* | /) factor)*
+term: atom ((* | /) atom)*
+
+atom: factor ((-- | ++))*
 
 factor: String
         | STRING
@@ -300,9 +308,9 @@ factor: String
         | id
         | + factor
         | - factor
+        | (( -- | ++ ))? factor
         | "(" expression ")"
         | None
-
 
 
 id: CallExpression
@@ -556,7 +564,14 @@ class Parser:
     def for_stmt(self):
         self.consume(Tokens._for)
         self.consume(Tokens.LPAREN)
-        var = self.var_declaration()
+
+        if self.curr_token.type == Tokens._var:
+            var = self.var_declaration()
+        elif self.curr_token.type == Tokens.IDENTIFIER:
+            var = self.id()
+        else:
+            var = NoOp()
+
         self.consume(Tokens.SEMI)
         condition = self.expression()
         self.consume(Tokens.SEMI)
@@ -643,8 +658,8 @@ class Parser:
             return node
 
         # print("not considerd", self.curr_token.type)
-        # return NoOp()
-        return None
+        return NoOp()
+        # return None
 
     def atom(self):
         node = self.factor()
@@ -868,12 +883,14 @@ class Interpreter(NodeVisiter):
     def visit_ForLoop(self, node):
         # decalare the var first
         self.visit(node.var)
-        while self.visit(node.condition):
+        condition_result = self.visit(node.condition)
+        while condition_result and condition_result is not None:
             ret_node = self.visit(node.body)
             # if ret_node is not None, means we've returned from function
             if ret_node is not None:
                 return ret_node
             self.visit(node.expr)
+            condition_result = self.visit(node.condition)
 
         return None
 
@@ -926,7 +943,7 @@ class Interpreter(NodeVisiter):
 
     # THIS IS FOR REASSIGNMENT
     def visit_Assignment(self, node):
-        if self.current_scope.get(node.left):
+        if self.current_scope.get(node.left) is not None:
             name = node.left
             value = self.visit(node.right)
             self.current_scope.insert(name, value)
@@ -947,7 +964,7 @@ class Interpreter(NodeVisiter):
         return int(node.value)
 
     def visit_NoOp(self, node):
-        pass
+        return True
 
     def interpret(self):
         self.visit(self.tree)
