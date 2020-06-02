@@ -50,7 +50,7 @@ example4 = """
 example5 = """
     var i = 0;
     for(; i < 5; i++){
-        log(i++);
+        log(i);
     };
 """
 
@@ -125,7 +125,7 @@ class TestLexer:
         # fmt: off
         expected_result = [
             "var", "IDENTIFIER", "=", "NUMBER", ";", "for", "(", ";", "IDENTIFIER", "<", "NUMBER",
-            ";", "IDENTIFIER", "++", ")", "{", "IDENTIFIER", "(", "IDENTIFIER", "++", ")", ";", "}", ";",  "EOF"
+            ";", "IDENTIFIER", "++", ")", "{", "IDENTIFIER", "(", "IDENTIFIER", ")", ";", "}", ";",  "EOF"
         ]
         # fmt: on
 

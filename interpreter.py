@@ -3,15 +3,11 @@ from collections import OrderedDict
 
 example = """
 
-function print5(x){
-
-    var i = 0;
-    for(; i < 5; i++){
-        log(i++);
-    };
+var i = 0;
+for(; i < 5; i++){
+    log(i++);
 };
 
-print5(0);
 """
 
 # fmt: off
@@ -744,19 +740,40 @@ class SymbolTable:
         self.table = OrderedDict()
 
     def __str__(self):
-        return """
-        name: {}
-        level: {}
-        parent_scope: {}
-        table: {}
-        """.format(
-            self.func_name, self.level, self.parent_scope, self.table
-        )
+        h1 = "SCOPE (SCOPED SYMBOL TABLE)"
+        lines = ["\n", h1, "=" * len(h1)]
+        for header_name, header_value in (
+            ("Scope name", self.func_name),
+            ("Scope level", self.level),
+            (
+                "Enclosing scope",
+                self.parent_scope.func_name if self.parent_scope else None,
+            ),
+        ):
+            lines.append("%-15s: %s" % (header_name, header_value))
+
+        h2 = "Scope (Scoped symbol table) contents"
+        lines.extend([h2, "-" * len(h2)])
+        lines.extend(("%7s: %r" % (key, value)) for key, value in self.table.items())
+
+        lines.append("\n")
+        s = "\n".join(lines)
+        return s
 
     __repr__ = __str__
 
     def insert(self, name, value):
         self.table[name] = value
+
+    def reassign(self, name, value):
+        old_val = self.get(name)
+        if old_val is not None:
+            self.table[name] = value
+
+        if self.level == 1:
+            return None
+
+        return self.parent_scope.reassign(name, value)
 
     def remove(self, name):
         return self.table.pop(name)
@@ -926,13 +943,13 @@ class Interpreter(NodeVisiter):
     def visit_PostIncDecOp(self, node):
         value = self.current_scope.get(node.left.value)
         new_value = value + 1 if node.op.type == Tokens.PLUSPLUS else value - 1
-        self.current_scope.insert(node.left.value, new_value)
+        self.current_scope.reassign(node.left.value, new_value)
         return value
 
     def visit_PreIncDecOp(self, node):
         value = self.current_scope.get(node.left.value)
         new_value = value + 1 if node.op.type == Tokens.PLUSPLUS else value - 1
-        self.current_scope.insert(node.left.value, new_value)
+        self.current_scope.reassign(node.left.value, new_value)
         return new_value
 
     def visit_UnaryOp(self, node):
@@ -943,10 +960,9 @@ class Interpreter(NodeVisiter):
 
     # THIS IS FOR REASSIGNMENT
     def visit_Assignment(self, node):
-        if self.current_scope.get(node.left) is not None:
-            name = node.left
-            value = self.visit(node.right)
-            self.current_scope.insert(name, value)
+        name = node.left
+        value = self.visit(node.right)
+        if self.current_scope.reassign(name, value) is not None:
             return name
         else:
             self.error(node.left)
