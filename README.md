@@ -39,7 +39,6 @@ log(x);
 
 ### Expressions
 ```js
-
 var x = 0 + add(2, 3);
 var x = x + add(2, 3);
 var x = (x * 2) / 2;
@@ -82,7 +81,6 @@ log("x: ", x); /* 2 */
 
 ```js
 for(var i = 0; i < 5; i++){
-
     log(i);
 };
 

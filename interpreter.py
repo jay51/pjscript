@@ -5,7 +5,9 @@ example = """
 
 var i = 0;
 for(; i < 5; i++){
-    log(i++);
+    log(i);
+    ++i;
+    i++;
 };
 
 """
@@ -292,7 +294,7 @@ Var_assigne, # name = "jack";
 Return: # return 2 * add(2, 2)
     expr: expression
 
-expression: term ((+ | -) term)*
+expression: term ((+ | - | < | > | >= | <= | == | !=) term)*
 
 term: atom ((* | /) atom)*
 
@@ -526,6 +528,14 @@ class Parser:
             node = self.for_stmt()
             return node
 
+        elif self.curr_token.type == Tokens.PLUSPLUS:
+            node = self.expression()
+            return node
+
+        elif self.curr_token.type == Tokens.MINUSMINUS:
+            node = self.expression()
+            return node
+
         elif self.curr_token.type == Tokens.EOF:
             node = NoOp()
             return node
@@ -592,6 +602,16 @@ class Parser:
 
         if self.curr_token.type == Tokens.EQUAL:
             return self.var_assigne(token)
+
+        if self.curr_token.type == Tokens.PLUSPLUS:
+            op = self.curr_token
+            self.consume(Tokens.PLUSPLUS)
+            return PostIncDecOp(token, op)
+
+        if self.curr_token.type == Tokens.MINUSMINUS:
+            op = self.curr_token
+            self.consume(Tokens.MINUSMINUS)
+            return PostIncDecOp(token, op)
 
         # variable
         return Identifier(token)
