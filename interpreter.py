@@ -3,12 +3,11 @@ from collections import OrderedDict
 
 example = """
 
-var i = 0;
-for(; i < 5; i++){
-    log(i);
-    ++i;
-    i++;
-};
+var name = null;
+log(name);
+name = "jack";
+log(name);
+
 
 """
 
@@ -41,6 +40,7 @@ class Tokens():
     NUMBER      = "NUMBER"
     IDENTIFIER  = "IDENTIFIER"
     # RESERVED_KEYWORDS
+    _null       = "null"
     _var        = "var"
     _function   = "function"
     _return     = "return"
@@ -134,7 +134,7 @@ class Lexer:
             self.advance()
 
         if hasattr(Tokens, "_" + id):
-            token_type = getattr(Tokens, "_" + id)  # RESERVED_KEYWORDS (var, log)
+            token_type = getattr(Tokens, "_" + id)  # RESERVED_KEYWORDS
             return Token(token_type, id)
         else:
             return Token(Tokens.IDENTIFIER, id)
@@ -338,7 +338,18 @@ class Num:
         self.value = token.value
 
     def __str__(self):
-        return "<{} : {}>".format(self.__class__.__name__, self.value)
+        return "({} : {})".format(self.__class__.__name__, self.value)
+
+    __repr__ = __str__
+
+
+class Null:
+    def __init__(self, token):
+        self.token = token
+        self.value = token.value
+
+    def __str__(self):
+        return "({} : {})".format(self.__class__.__name__, self.value)
 
     __repr__ = __str__
 
@@ -349,7 +360,7 @@ class String:
         self.value = token.value
 
     def __str__(self):
-        return "<{} : {}>".format(self.__class__.__name__, self.value)
+        return "({} : {})".format(self.__class__.__name__, self.value)
 
     __repr__ = __str__
 
@@ -360,7 +371,7 @@ class Identifier:
         self.value = token.value  # var name
 
     def __str__(self):
-        return "<{} : {}>".format(self.__class__.__name__, self.value)
+        return "({} : {})".format(self.__class__.__name__, self.value)
 
     __repr__ = __str__
 
@@ -371,7 +382,7 @@ class VarDeclaration:
         self.right = right
 
     def __str__(self):
-        return "VarDeclaration<{} : {}  -> {}>".format(
+        return "VarDeclaration({} : {}  -> {})".format(
             self.left, self.right.__class__.__name__, self.right
         )
 
@@ -647,6 +658,10 @@ class Parser:
         elif token.type == Tokens.NUMBER:
             return self.parse_number()
 
+        elif token.type == Tokens._null:
+            self.consume(Tokens._null)
+            return Null(token)
+
         elif token.type == Tokens.PLUS:
             self.consume(Tokens.PLUS)
             node = UnaryOp(token, self.factor())
@@ -789,6 +804,7 @@ class SymbolTable:
         old_val = self.get(name)
         if old_val is not None:
             self.table[name] = value
+            return value
 
         if self.level == 1:
             return None
@@ -982,6 +998,7 @@ class Interpreter(NodeVisiter):
     def visit_Assignment(self, node):
         name = node.left
         value = self.visit(node.right)
+
         if self.current_scope.reassign(name, value) is not None:
             return name
         else:
@@ -994,6 +1011,9 @@ class Interpreter(NodeVisiter):
         return value
 
     def visit_String(self, node):
+        return node.value
+
+    def visit_Null(self, node):
         return node.value
 
     def visit_Num(self, node):
