@@ -3,6 +3,12 @@ programming languages are not a black box and that you could learn the basic con
 While this language is not a real programming language however a lot of the internal concepts displayed in this
 language is taken from other real programming languages.
 
+### Data types:
+    - Int (positive & negitive)
+    - String
+    - Null
+
+
 ### Basic statemnets
 ```js
 /* this is a comment */
@@ -14,7 +20,6 @@ log(1, "it's working fuck yea", name);
 var x = add(age, add(2,3));
 log(x);
 ```
-
 
 
 ### Functions and Scope
