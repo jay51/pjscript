@@ -3,11 +3,9 @@ from collections import OrderedDict
 
 example = """
 
-var name = null;
-log(name);
-name = "jack";
-log(name);
-
+for(var i = 0; i < 2; i++){
+    log(i++);
+};
 
 """
 
@@ -801,7 +799,7 @@ class SymbolTable:
         self.table[name] = value
 
     def reassign(self, name, value):
-        old_val = self.get(name)
+        old_val = self.table.get(name)
         if old_val is not None:
             self.table[name] = value
             return value
@@ -979,7 +977,8 @@ class Interpreter(NodeVisiter):
     def visit_PostIncDecOp(self, node):
         value = self.current_scope.get(node.left.value)
         new_value = value + 1 if node.op.type == Tokens.PLUSPLUS else value - 1
-        self.current_scope.reassign(node.left.value, new_value)
+        if self.current_scope.reassign(node.left.value, new_value) is None:
+            self.error(node.left.value)
         return value
 
     def visit_PreIncDecOp(self, node):
