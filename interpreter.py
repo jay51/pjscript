@@ -2,16 +2,14 @@ import sys
 from collections import OrderedDict
 
 example = """
-
-
-function add2num(x, y){
-    log(x + y);
-    return null;
-};
-
-var result = add2num(1, 2);
-log(result);
-
+    function loop(){
+        var i = 0;
+        for(; i < 5; i++){
+            log(i);
+        };
+        return null;
+    };
+    log(loop());
 """
 
 # fmt: off
@@ -571,7 +569,11 @@ class Parser:
         name = self.curr_token.value
         self.consume(Tokens.IDENTIFIER)
         self.consume(Tokens.LPAREN)
-        params = [self.expression()]
+        node = self.expression()
+        params = []
+        if not isinstance(node, NoOp):
+            params.append(node)
+
         while self.curr_token.type == Tokens.COMMA:
             self.consume(Tokens.COMMA)
             params.append(self.expression())
@@ -642,7 +644,9 @@ class Parser:
         args = []
         self.consume(Tokens.LPAREN)
         # print(self.curr_token)
-        args.append(self.expression())
+        node = self.expression()
+        if not isinstance(node, NoOp):
+            args.append(node)
         # print(self.curr_token)
         while self.curr_token.type == Tokens.COMMA:
             self.consume(Tokens.COMMA)
@@ -913,7 +917,7 @@ class Interpreter(NodeVisiter):
                 )
 
             for idx, param in enumerate(func.params):
-                if param is None or node.args[idx] is None:
+                if isinstance(param, NoOp) or node.args[idx] is None:
                     print(
                         "Warning: param is {} and arg is {} ".format(
                             param, node.args[idx]
@@ -928,7 +932,7 @@ class Interpreter(NodeVisiter):
             ret_node = self.visit(node.default_ret) if ret_node is None else ret_node
 
             for idx, param in enumerate(func.params):
-                if param is None or node.args[idx] is None:
+                if isinstance(param, NoOp) or node.args[idx] is None:
                     continue
                 self.current_scope.remove(param.value)
 

@@ -48,10 +48,14 @@ example4 = """
 """
 
 example5 = """
-    var i = 0;
-    for(; i < 5; i++){
-        log(i);
+    function loop(){
+        var i = 0;
+        for(; i < 5; i++){
+            log(i);
+        };
+        return null;
     };
+    log(loop());
 """
 
 
@@ -124,8 +128,9 @@ class TestLexer:
     def test_forloop(self):
         # fmt: off
         expected_result = [
-            "var", "IDENTIFIER", "=", "NUMBER", ";", "for", "(", ";", "IDENTIFIER", "<", "NUMBER",
-            ";", "IDENTIFIER", "++", ")", "{", "IDENTIFIER", "(", "IDENTIFIER", ")", ";", "}", ";",  "EOF"
+            "function", "IDENTIFIER", "(", ")", "{", "var", "IDENTIFIER", "=", "NUMBER", ";", "for", "(", ";", "IDENTIFIER", "<", "NUMBER",
+            ";", "IDENTIFIER", "++", ")", "{", "IDENTIFIER", "(", "IDENTIFIER", ")", ";", "}", ";", "return", "null", ";", "}", ";",
+            "IDENTIFIER", "(", "IDENTIFIER", "(",")", ")", ";", "EOF"
         ]
         # fmt: on
 
@@ -219,7 +224,7 @@ class TestParser:
             assert isinstance(node, expected_result[idx])
 
     def test_forloop(self):
-        expected_result = [VarDeclaration, ForLoop, NoOp]
+        expected_result = [FuncDeclaration, CallExpression, NoOp]
 
         lexer = Lexer(example5)
         parser = Parser(lexer)
@@ -306,6 +311,7 @@ class TestInterpreter:
         print("2", file=expected_result, end=" \n")
         print("3", file=expected_result, end=" \n")
         print("4", file=expected_result, end=" \n")
+        print("null", file=expected_result, end=" \n")
 
         tmp_stdout = StringIO()
         sys.stdout = tmp_stdout
