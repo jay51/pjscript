@@ -3,9 +3,14 @@ from collections import OrderedDict
 
 example = """
 
-for(var i = 0; i < 2; i++){
-    log(i++);
+
+function add2num(x, y){
+    log(x + y);
+    return null;
 };
+
+var result = add2num(1, 2);
+log(result);
 
 """
 
@@ -429,6 +434,8 @@ class CallExpression:
     def __init__(self, identifier, args):
         self.identifier = identifier
         self.args = args
+        # self.default_ret = Tokens._null
+        self.default_ret = Null(Token(Tokens._null, Tokens._null))
 
     def __str__(self):
         return "<{} : {}  -> {}>".format(
@@ -916,7 +923,9 @@ class Interpreter(NodeVisiter):
                 # print("idx: {}, param: {}, args: {}".format(idx, param.value, node.args[idx].value))
                 self.visit(VarDeclaration(param.value, node.args[idx]))
 
+            # if function body did not return anything use default return
             ret_node = self.visit(func.body)
+            ret_node = self.visit(node.default_ret) if ret_node is None else ret_node
 
             for idx, param in enumerate(func.params):
                 if param is None or node.args[idx] is None:
