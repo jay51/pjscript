@@ -5,11 +5,37 @@ example = """
     function loop(){
         var i = 0;
         for(; i < 5; i++){
-            log(i);
+            if ( i == 3){
+                log(i);
+            };
         };
         return null;
     };
     log(loop());
+
+    var x = 1;
+    var y = 0;
+    if(x == 2){
+        var y = 2;
+        log("if");
+        log(y);
+
+    } else if (x == 3) {
+        log("else if");
+        var y = 2;
+        log(y);
+
+    } else if( x == 0) {
+        y = 2;
+        log("else if 2");
+        log(y);
+    }else {
+        log("else");
+    };
+
+    if (y == 1){
+        log(y);
+    };
 """
 
 # fmt: off
@@ -46,6 +72,8 @@ class Tokens():
     _function   = "function"
     _return     = "return"
     _for        = "for"
+    _if         = "if"
+    _else       = "else"
 # fmt: on
 
 
@@ -415,6 +443,21 @@ class ForLoop:
     __repr__ = __str__
 
 
+class IfStmt:
+    def __init__(self, condition, body, else_if_stmt, else_stmt):
+        self.condition = condition
+        self.body = body
+        self.else_if_stmt = else_if_stmt
+        self.else_stmt = else_stmt
+
+    def __str__(self):
+        return "If( {} : {} : {} )".format(
+            self.condition, self.else_if_stmt, self.else_stmt
+        )
+
+    __repr__ = __str__
+
+
 class Assignment:
     def __init__(self, left, right):
         self.left = left
@@ -528,12 +571,15 @@ class Parser:
         if self.curr_token.type == Tokens._var:
             node = self.var_declaration()
             return node
+
         elif self.curr_token.type == Tokens.IDENTIFIER:
             node = self.id()
             return node
+
         elif self.curr_token.type == Tokens._function:
             node = self.func_declaration()
             return node
+
         elif self.curr_token.type == Tokens._return:
             node = self.return_stmt()
             return node
@@ -548,6 +594,10 @@ class Parser:
 
         elif self.curr_token.type == Tokens.MINUSMINUS:
             node = self.expression()
+            return node
+
+        elif self.curr_token.type == Tokens._if:
+            node = self.if_stmt()
             return node
 
         elif self.curr_token.type == Tokens.EOF:
@@ -605,6 +655,32 @@ class Parser:
         body = self.program("for")
         self.consume(Tokens.RCURLY)
         return ForLoop(var, condition, expr, body)
+
+    def if_stmt(self):
+        self.consume(Tokens._if)
+        self.consume(Tokens.LPAREN)
+
+        condition = self.expression()
+
+        self.consume(Tokens.RPAREN)
+        self.consume(Tokens.LCURLY)
+
+        body = self.program("if")
+        self.consume(Tokens.RCURLY)
+
+        if self.curr_token.type == Tokens._else:
+            self.consume(Tokens._else)
+            if self.curr_token.type == Tokens._if:
+                else_if_stmt = self.if_stmt()
+                return IfStmt(condition, body, else_if_stmt, None)
+
+            self.consume(Tokens.LCURLY)
+            else_body = self.program("else")
+            self.consume(Tokens.RCURLY)
+            return IfStmt(condition, body, None, else_body)
+
+        # in the case of no `else if` or `else` parts
+        return IfStmt(condition, body, None, None)
 
     def return_stmt(self):
         self.consume(Tokens._return)
@@ -957,6 +1033,18 @@ class Interpreter(NodeVisiter):
             condition_result = self.visit(node.condition)
 
         return None
+
+    def visit_IfStmt(self, node):
+        condition_result = self.visit(node.condition)
+        if condition_result:
+            self.visit(node.body)
+
+        # it's going to be treated just like another if statement
+        elif node.else_if_stmt is not None:
+            self.visit(node.else_if_stmt)
+
+        elif node.else_stmt is not None:
+            self.visit(node.else_stmt)
 
     def visit_FuncDeclaration(self, node):
         self.current_scope.insert(node.name, node)
