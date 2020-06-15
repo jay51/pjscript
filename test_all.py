@@ -58,6 +58,22 @@ example5 = """
     log(loop());
 """
 
+example6 = """
+    var i = 0;
+    if(i == 1){
+        log("if");
+    } else if (i == 0) {
+        log("else if");
+    } else {
+        log("else");
+    };
+
+    var y = 0;
+    if (y == 0){
+        log("y is:", y);
+    };
+"""
+
 
 class TestLexer:
     def test_expression(self):
@@ -135,6 +151,20 @@ class TestLexer:
         # fmt: on
 
         lexer = Lexer(example5)
+        for idx, tok in enumerate(lexer):
+            assert tok.type == expected_result[idx]
+
+    def test_if_else(self):
+        # fmt: off
+        expected_result = [
+            "var", "IDENTIFIER", "=", "NUMBER", ";", "if", "(", "IDENTIFIER", "==", "NUMBER", ")", "{", "IDENTIFIER",
+            "(", "STRING", ")", ";", "}", "else", "if", "(", "IDENTIFIER", "==", "NUMBER", ")", "{", "IDENTIFIER", "(",
+            "STRING", ")", ";", "}", "else", "{", "IDENTIFIER", "(", "STRING", ")", ";", "}", ";", "var", "IDENTIFIER", "=",
+            "NUMBER", ";", "if", "(", "IDENTIFIER", "==", "NUMBER", ")", "{", "IDENTIFIER", "(", "STRING", ",", "IDENTIFIER", ")", ";", "}", ";", "EOF"
+            ]
+        # fmt: on
+
+        lexer = Lexer(example6)
         for idx, tok in enumerate(lexer):
             assert tok.type == expected_result[idx]
 
@@ -236,6 +266,19 @@ class TestParser:
         for idx, node in enumerate(result):
             assert isinstance(node, expected_result[idx])
 
+    def test_if_else(self):
+        expected_result = [VarDeclaration, IfStmt, VarDeclaration, IfStmt, NoOp]
+
+        lexer = Lexer(example6)
+        parser = Parser(lexer)
+
+        result = []
+        for node in parser.parse().body:
+            result.append(node)
+
+        for idx, node in enumerate(result):
+            assert isinstance(node, expected_result[idx])
+
 
 class TestInterpreter:
     def test_expression(self):
@@ -316,6 +359,20 @@ class TestInterpreter:
         tmp_stdout = StringIO()
         sys.stdout = tmp_stdout
         lexer = Lexer(example5)
+        tree = Parser(lexer).parse()
+        interpreter = Interpreter(tree)
+        interpreter.interpret()
+        sys.stdout = sys.__stdout__
+        assert tmp_stdout.getvalue() == expected_result.getvalue()
+
+    def test_if_else(self):
+        expected_result = StringIO()
+        print("else if", file=expected_result, end=" \n")
+        print("y is: 0", file=expected_result, end=" \n")
+
+        tmp_stdout = StringIO()
+        sys.stdout = tmp_stdout
+        lexer = Lexer(example6)
         tree = Parser(lexer).parse()
         interpreter = Interpreter(tree)
         interpreter.interpret()

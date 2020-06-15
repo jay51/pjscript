@@ -101,3 +101,33 @@ for(; ; i++){
     log(i);
 };
 ```
+
+### IF ELSE
+
+```js
+var x = 0;
+if(x == 3){
+    log("if");
+
+} else if(x == 2){
+    log("else if");
+
+} else if (x == 1){
+    log("else if second");
+
+}else{
+    log("else");
+};
+
+var y = 2;
+if (x == 2){
+    log("if only");
+};
+
+for(var i = 0; i < 5; i++){
+    if(i == 3){
+        log(i);
+    };
+};
+
+```
