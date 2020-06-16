@@ -277,6 +277,7 @@ Statement:
         | Var_assigne
         | FuncDeclaration
         | ForLoop
+        | IfStmt
         | Return
         | NoOp
 
@@ -284,6 +285,21 @@ Statement:
 CallExpression
     callee: id
     args: []
+
+
+ForLoop: # for(var i =0; i<5; i++){...};
+    var_dec: VarDeclaration | Var_assigne | NoOp
+    condition: Expression | NoOp
+    expr: Expression | NoOp
+    body: Program
+
+
+IfStmt: if ( 1 == 0) {...} else if (1 == 1) {...} else{...};
+    condition: Expression | NoOp
+    else_if_stmt: IfStmt
+    else_stmt: Program
+    body: Program
+
 
 
 VarDeclaration, # var name = "jack";
@@ -544,10 +560,24 @@ class Parser:
 
     def program(self, scope):
         body = []
-        body.append(self.statement())
-        while self.curr_token.type == Tokens.SEMI:
-            self.consume(Tokens.SEMI)
-            body.append(self.statement())
+        node = self.statement()
+        if isinstance(node, NoOp):
+            print("empty file")
+            sys.exit()
+
+        body.append(node)
+        while True:
+            if self.curr_token.type == Tokens.SEMI:
+                self.consume(Tokens.SEMI)
+                node = self.statement()
+                if isinstance(node, NoOp):
+                    break
+
+                body.append(node)
+
+            elif self.curr_token.type != Tokens.SEMI:
+                raise Exception("missing ;")
+
         return Program(body, scope)
 
     def statement(self):
@@ -1038,7 +1068,6 @@ class Interpreter(NodeVisiter):
             return self.visit(node.else_stmt)
 
         return None
-
 
     def visit_FuncDeclaration(self, node):
         self.current_scope.insert(node.name, node)
