@@ -6,36 +6,19 @@ example = """
         var i = 0;
         for(; i < 5; i++){
             if ( i == 3){
-                log(i);
+                log("if, should return first if you remove else and if else block");
+                return i;
+            } else if (i == 2) {
+                log("elseif should return first if you remove else block");
+                return i;
+            } else {
+                log("else should return first on 0");
+                return i;
             };
+            log(i);
         };
-        return null;
     };
     log(loop());
-
-    var x = 1;
-    var y = 0;
-    if(x == 2){
-        var y = 2;
-        log("if");
-        log(y);
-
-    } else if (x == 3) {
-        log("else if");
-        var y = 2;
-        log(y);
-
-    } else if( x == 0) {
-        y = 2;
-        log("else if 2");
-        log(y);
-    }else {
-        log("else");
-    };
-
-    if (y == 1){
-        log(y);
-    };
 """
 
 # fmt: off
@@ -962,6 +945,14 @@ class Interpreter(NodeVisiter):
                     self.current_scope = self.current_scope.parent_scope
                     return node
 
+            elif isinstance(stmt, IfStmt):
+                # if node is not None, means IfStmt's encountered a Return_stmt
+                # and node is what's being or should be returend
+                node = self.visit(stmt)
+                if node is not None:
+                    self.current_scope = self.current_scope.parent_scope
+                    return node
+
             else:
                 self.visit(stmt)
 
@@ -1037,14 +1028,17 @@ class Interpreter(NodeVisiter):
     def visit_IfStmt(self, node):
         condition_result = self.visit(node.condition)
         if condition_result:
-            self.visit(node.body)
+            return self.visit(node.body)
 
         # it's going to be treated just like another if statement
         elif node.else_if_stmt is not None:
-            self.visit(node.else_if_stmt)
+            return self.visit(node.else_if_stmt)
 
         elif node.else_stmt is not None:
-            self.visit(node.else_stmt)
+            return self.visit(node.else_stmt)
+
+        return None
+
 
     def visit_FuncDeclaration(self, node):
         self.current_scope.insert(node.name, node)
