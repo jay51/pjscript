@@ -3,27 +3,22 @@ import sys
 from collections import OrderedDict
 
 example = """
-    function loop(){
         var i = 0;
-        for(; i < 5; i++){
-            if ( i == 3){
-                log("if, should return first if you remove else and if else block");
-                return i;
-            } else if (i == 2) {
-                log("elseif should return first if you remove else block");
-                return i;
-            } else {
-                log("else should return first on 0");
-                return i;
-            };
-            log(i);
+        if( 1 == 1 || 2 == 2 ){
+            log("yes");
         };
-    };
-    log(loop());
+
+        if( 1 + 1 > 2 + 2 ){
+            log("should not work");
+        };
 """
 
 # fmt: off
 class Tokens():
+    OR          = "|"
+    AND         = "&"
+    NOT         = "!" # still not implemented!
+    PLUSPLUS    = "++"
     PLUSPLUS    = "++"
     MINUSMINUS  = "--"
     PLUS        = "+"
@@ -36,7 +31,6 @@ class Tokens():
     LTE         = "<="
     EQUALEQUAL  = "=="
     NOTEQUAL    = "!="
-    NOT         = "!"
     COMMENT     = "/*"
     COMMA       = ","
     LPAREN      = "("
@@ -226,6 +220,27 @@ class Lexer:
                 self.advance()
                 self.advance()
                 return Token(Tokens.NOTEQUAL, Tokens.NOTEQUAL)
+
+            if self.curr_char == Tokens.NOT:
+                self.advance()
+                return Token(Tokens.NOT, Tokens.NOT)
+
+
+            # LOGICAL OR
+            if self.curr_char == Tokens.OR:
+                self.advance()
+                if self.curr_char == Tokens.OR:
+                    self.advance()
+                    return Token(Tokens.OR, Tokens.OR)
+
+            # LOGICAL AND
+            if self.curr_char == Tokens.AND:
+                self.advance()
+                if self.curr_char == Tokens.AND:
+                    self.advance()
+                    return Token(Tokens.AND, Tokens.AND)
+
+
 
             if self.curr_char == Tokens.GT:
                 self.advance()
@@ -808,21 +823,9 @@ class Parser:
     def term(self):
         node = self.atom()
 
-        while self.curr_token.type in (Tokens.MUL, Tokens.DIV):
-            token = self.curr_token
-            if token.type == Tokens.MUL:
-                self.consume(Tokens.MUL)
-            if token.type == Tokens.DIV:
-                self.consume(Tokens.DIV)
-
-            node = BinOp(left=node, op=token, right=self.factor())
-        return node
-
-    def expression(self):
-        node = self.term()
         while self.curr_token.type in (
-            Tokens.PLUS,
-            Tokens.MINUS,
+            Tokens.MUL,
+            Tokens.DIV,
             Tokens.GT,
             Tokens.LT,
             Tokens.GTE,
@@ -831,10 +834,11 @@ class Parser:
             Tokens.NOTEQUAL,
         ):
             token = self.curr_token
-            if token.type == Tokens.PLUS:
-                self.consume(Tokens.PLUS)
-            if token.type == Tokens.MINUS:
-                self.consume(Tokens.MINUS)
+            if token.type == Tokens.MUL:
+                self.consume(Tokens.MUL)
+            if token.type == Tokens.DIV:
+                self.consume(Tokens.DIV)
+
             if token.type == Tokens.GT:
                 self.consume(Tokens.GT)
             if token.type == Tokens.LT:
@@ -847,6 +851,28 @@ class Parser:
                 self.consume(Tokens.EQUALEQUAL)
             if token.type == Tokens.NOTEQUAL:
                 self.consume(Tokens.NOTEQUAL)
+
+            node = BinOp(left=node, op=token, right=self.factor())
+        return node
+
+
+    def expression(self):
+        node = self.term()
+        while self.curr_token.type in (
+            Tokens.PLUS,
+            Tokens.MINUS,
+            Tokens.OR,
+            Tokens.AND,
+        ):
+            token = self.curr_token
+            if token.type == Tokens.PLUS:
+                self.consume(Tokens.PLUS)
+            if token.type == Tokens.MINUS:
+                self.consume(Tokens.MINUS)
+            if token.type == Tokens.OR:
+                self.consume(Tokens.OR)
+            if token.type == Tokens.AND:
+                self.consume(Tokens.AND)
 
             node = BinOp(left=node, op=token, right=self.term())
         return node
@@ -1098,6 +1124,14 @@ class Interpreter(NodeVisiter):
             return self.visit(node.left) == self.visit(node.right)
         if node.op.type == Tokens.NOTEQUAL:
             return self.visit(node.left) != self.visit(node.right)
+
+
+        if node.op.type == Tokens.OR:
+            return self.visit(node.left) or self.visit(node.right)
+
+        if node.op.type == Tokens.AND:
+            return self.visit(node.left) and self.visit(node.right)
+
 
     def visit_PostIncDecOp(self, node):
         value = self.current_scope.get(node.left.value)
