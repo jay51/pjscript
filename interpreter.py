@@ -3,14 +3,20 @@ import sys
 from collections import OrderedDict
 
 example = """
-        var i = 0;
-        if( 1 == 1 || 2 == 2 ){
-            log("yes");
-        };
-
-        if( 1 + 1 > 2 + 2 ){
+        /*
+        if( 1 == 6 || 3 == 3 ){
             log("should not work");
         };
+
+        if( 1 + 6 > 3 + 3 ){
+            log("should not work");
+        };
+
+        */
+        if( 1 + 6 > 3 + 3 && 1 == 1 ){
+            log("should not work");
+        };
+
 """
 
 # fmt: off
@@ -225,7 +231,6 @@ class Lexer:
                 self.advance()
                 return Token(Tokens.NOT, Tokens.NOT)
 
-
             # LOGICAL OR
             if self.curr_char == Tokens.OR:
                 self.advance()
@@ -239,8 +244,6 @@ class Lexer:
                 if self.curr_char == Tokens.AND:
                     self.advance()
                     return Token(Tokens.AND, Tokens.AND)
-
-
 
             if self.curr_char == Tokens.GT:
                 self.advance()
@@ -467,7 +470,9 @@ class IfStmt:
 
     def __str__(self):
         return "If( {} : {} : {} )".format(
-            self.condition, self.else_if_stmt, self.else_stmt
+            self.condition,
+            self.else_if_stmt or "else if part",
+            self.else_stmt or "else part",
         )
 
     __repr__ = __str__
@@ -618,11 +623,11 @@ class Parser:
             return node
 
         elif self.curr_token.type == Tokens.PLUSPLUS:
-            node = self.expression()
+            node = self.expr()
             return node
 
         elif self.curr_token.type == Tokens.MINUSMINUS:
-            node = self.expression()
+            node = self.expr()
             return node
 
         elif self.curr_token.type == Tokens._if:
@@ -640,7 +645,7 @@ class Parser:
         left = self.curr_token.value
         self.consume(Tokens.IDENTIFIER)
         self.consume(Tokens.EQUAL)
-        right = self.expression()
+        right = self.expr()
         return VarDeclaration(left, right)
 
     def func_declaration(self):
@@ -648,14 +653,14 @@ class Parser:
         name = self.curr_token.value
         self.consume(Tokens.IDENTIFIER)
         self.consume(Tokens.LPAREN)
-        node = self.expression()
+        node = self.expr()
         params = []
         if not isinstance(node, NoOp):
             params.append(node)
 
         while self.curr_token.type == Tokens.COMMA:
             self.consume(Tokens.COMMA)
-            params.append(self.expression())
+            params.append(self.expr())
 
         self.consume(Tokens.RPAREN)
         self.consume(Tokens.LCURLY)
@@ -676,9 +681,9 @@ class Parser:
             var = NoOp()
 
         self.consume(Tokens.SEMI)
-        condition = self.expression()
+        condition = self.expr()
         self.consume(Tokens.SEMI)
-        expr = self.expression()
+        expr = self.expr()
         self.consume(Tokens.RPAREN)
         self.consume(Tokens.LCURLY)
         body = self.program("for")
@@ -689,7 +694,7 @@ class Parser:
         self.consume(Tokens._if)
         self.consume(Tokens.LPAREN)
 
-        condition = self.expression()
+        condition = self.expr()
 
         self.consume(Tokens.RPAREN)
         self.consume(Tokens.LCURLY)
@@ -713,7 +718,7 @@ class Parser:
 
     def return_stmt(self):
         self.consume(Tokens._return)
-        expr = self.expression()
+        expr = self.expr()
         return ReturnStmt(expr)
 
     def id(self):
@@ -742,20 +747,20 @@ class Parser:
     def var_assigne(self, token):
         left = token.value
         self.consume(Tokens.EQUAL)
-        right = self.expression()
+        right = self.expr()
         return Assignment(left, right)
 
     def function_call(self, token):
         args = []
         self.consume(Tokens.LPAREN)
         # print(self.curr_token)
-        node = self.expression()
+        node = self.expr()
         if not isinstance(node, NoOp):
             args.append(node)
         # print(self.curr_token)
         while self.curr_token.type == Tokens.COMMA:
             self.consume(Tokens.COMMA)
-            args.append(self.expression())
+            args.append(self.expr())
         # print(self.curr_token)
         self.consume(Tokens.RPAREN)
         return CallExpression(token.value, args)
@@ -788,7 +793,7 @@ class Parser:
 
         elif token.type == Tokens.LPAREN:
             self.consume(Tokens.LPAREN)
-            node = self.expression()
+            node = self.expr()
             self.consume(Tokens.RPAREN)
             return node
 
@@ -823,22 +828,38 @@ class Parser:
     def term(self):
         node = self.atom()
 
-        while self.curr_token.type in (
-            Tokens.MUL,
-            Tokens.DIV,
-            Tokens.GT,
-            Tokens.LT,
-            Tokens.GTE,
-            Tokens.LTE,
-            Tokens.EQUALEQUAL,
-            Tokens.NOTEQUAL,
-        ):
+        while self.curr_token.type in (Tokens.MUL, Tokens.DIV):
             token = self.curr_token
             if token.type == Tokens.MUL:
                 self.consume(Tokens.MUL)
             if token.type == Tokens.DIV:
                 self.consume(Tokens.DIV)
 
+            node = BinOp(left=node, op=token, right=self.factor())
+        return node
+
+    def expression(self):
+        node = self.term()
+        while self.curr_token.type in (
+            Tokens.PLUS,
+            Tokens.MINUS,
+            Tokens.EQUALEQUAL,
+            Tokens.NOTEQUAL,
+        ):
+            token = self.curr_token
+            if token.type == Tokens.EQUALEQUAL:
+                self.consume(Tokens.EQUALEQUAL)
+            if token.type == Tokens.NOTEQUAL:
+                self.consume(Tokens.NOTEQUAL)
+            if token.type == Tokens.PLUS:
+                self.consume(Tokens.PLUS)
+            if token.type == Tokens.MINUS:
+                self.consume(Tokens.MINUS)
+
+            node = BinOp(left=node, op=token, right=self.term())
+
+        while self.curr_token.type in (Tokens.GT, Tokens.LT, Tokens.GTE, Tokens.LTE):
+            token = self.curr_token
             if token.type == Tokens.GT:
                 self.consume(Tokens.GT)
             if token.type == Tokens.LT:
@@ -847,34 +868,23 @@ class Parser:
                 self.consume(Tokens.GTE)
             if token.type == Tokens.LTE:
                 self.consume(Tokens.LTE)
-            if token.type == Tokens.EQUALEQUAL:
-                self.consume(Tokens.EQUALEQUAL)
-            if token.type == Tokens.NOTEQUAL:
-                self.consume(Tokens.NOTEQUAL)
 
-            node = BinOp(left=node, op=token, right=self.factor())
+            node = BinOp(left=node, op=token, right=self.expression())
+
         return node
 
-
-    def expression(self):
-        node = self.term()
-        while self.curr_token.type in (
-            Tokens.PLUS,
-            Tokens.MINUS,
-            Tokens.OR,
-            Tokens.AND,
-        ):
+    def expr(self):
+        node = self.expression()
+        # These operators are evaluated last
+        while self.curr_token.type in (Tokens.OR, Tokens.AND):
             token = self.curr_token
-            if token.type == Tokens.PLUS:
-                self.consume(Tokens.PLUS)
-            if token.type == Tokens.MINUS:
-                self.consume(Tokens.MINUS)
             if token.type == Tokens.OR:
                 self.consume(Tokens.OR)
             if token.type == Tokens.AND:
                 self.consume(Tokens.AND)
 
-            node = BinOp(left=node, op=token, right=self.term())
+            node = BinOp(left=node, op=token, right=self.expression())
+
         return node
 
     def parse_string(self):
@@ -1125,13 +1135,11 @@ class Interpreter(NodeVisiter):
         if node.op.type == Tokens.NOTEQUAL:
             return self.visit(node.left) != self.visit(node.right)
 
-
         if node.op.type == Tokens.OR:
             return self.visit(node.left) or self.visit(node.right)
 
         if node.op.type == Tokens.AND:
             return self.visit(node.left) and self.visit(node.right)
-
 
     def visit_PostIncDecOp(self, node):
         value = self.current_scope.get(node.left.value)
