@@ -274,6 +274,7 @@ class Lexer:
         return Token(Tokens.EOF, Tokens.EOF)
 
 
+# TODO: update the AST grammar
 # PARSER
 """
 AST
@@ -368,6 +369,7 @@ identifier: [a-zA-Z][a-zA-Z0-9_]
 """
 
 
+# TODO: print nested nodes or the AST nicly
 class Program:
     def __init__(self, body, scope=None):
         self.scope = scope

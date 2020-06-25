@@ -378,3 +378,31 @@ class TestInterpreter:
         interpreter.interpret()
         sys.stdout = sys.__stdout__
         assert tmp_stdout.getvalue() == expected_result.getvalue()
+
+    def test_operators_order(self):
+        example = """
+            if( 1 == 6 || 3 == 3 ){
+                log("yes");
+            };
+
+            if( 1 + 6 > 3 + 3 ){
+                log("yes");
+            };
+
+            if( 1 + 6 > 3 + 3 && 1 == 1 ){
+                log("yes");
+            };
+        """
+        expected_result = StringIO()
+        print("yes", file=expected_result, end=" \n")
+        print("yes", file=expected_result, end=" \n")
+        print("yes", file=expected_result, end=" \n")
+
+        tmp_stdout = StringIO()
+        sys.stdout = tmp_stdout
+        lexer = Lexer(example)
+        tree = Parser(lexer).parse()
+        interpreter = Interpreter(tree)
+        interpreter.interpret()
+        sys.stdout = sys.__stdout__
+        assert tmp_stdout.getvalue() == expected_result.getvalue()
