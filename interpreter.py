@@ -12,18 +12,22 @@ example = """
             log("should not work");
         };
 
-        */
         if( 1 + 6 > 3 + 3 && 1 == 1 ){
             log("should not work");
         };
+        */
+
+        var x = [1, 2];
+        log(x);
 
 """
 
 # fmt: off
 class Tokens():
+    # TODO: "!" is still not implemented!
     OR          = "|"
     AND         = "&"
-    NOT         = "!" # still not implemented!
+    NOT         = "!"
     PLUSPLUS    = "++"
     PLUSPLUS    = "++"
     MINUSMINUS  = "--"
@@ -43,6 +47,11 @@ class Tokens():
     RPAREN      = ")"
     LCURLY      = "{"
     RCURLY      = "}"
+
+    LBRACK      = "["
+    RBRACK      = "]"
+
+
     SEMI        = ";"
     EQUAL       = "="
     EOF         = "EOF"
@@ -181,6 +190,14 @@ class Lexer:
                 self.advance()
                 return Token(Tokens.RCURLY, Tokens.RCURLY)
 
+            if self.curr_char == Tokens.LBRACK:
+                self.advance()
+                return Token(Tokens.LBRACK, Tokens.LBRACK)
+
+            if self.curr_char == Tokens.RBRACK:
+                self.advance()
+                return Token(Tokens.RBRACK, Tokens.RBRACK)
+
             if self.curr_char == Tokens.PLUS and self.peek() == Tokens.PLUS:
                 self.advance()
                 self.advance()
@@ -227,6 +244,7 @@ class Lexer:
                 self.advance()
                 return Token(Tokens.NOTEQUAL, Tokens.NOTEQUAL)
 
+            # LOGICAL NOT
             if self.curr_char == Tokens.NOT:
                 self.advance()
                 return Token(Tokens.NOT, Tokens.NOT)
@@ -410,6 +428,16 @@ class String:
 
     def __str__(self):
         return "({} : {})".format(self.__class__.__name__, self.value)
+
+    __repr__ = __str__
+
+
+class Array:
+    def __init__(self, arr_elements):
+        self.values = arr_elements
+
+    def __str__(self):
+        return "({} : {})".format(self.__class__.__name__, self.values)
 
     __repr__ = __str__
 
@@ -746,6 +774,7 @@ class Parser:
         # variable
         return Identifier(token)
 
+    # TODO: modify to parse `var x[1] = 1`
     def var_assigne(self, token):
         left = token.value
         self.consume(Tokens.EQUAL)
@@ -767,6 +796,10 @@ class Parser:
         self.consume(Tokens.RPAREN)
         return CallExpression(token.value, args)
 
+    # var x = [];
+    # var x[21];
+    # var x = y[21];
+
     def factor(self):
         token = self.curr_token
 
@@ -774,6 +807,7 @@ class Parser:
             return self.parse_string()
 
         elif token.type == Tokens.IDENTIFIER:
+            # TODO: modify self.id() to parse `var x = y[2]`
             return self.id()
 
         elif token.type == Tokens.NUMBER:
@@ -791,6 +825,22 @@ class Parser:
         elif token.type == Tokens.MINUS:
             self.consume(Tokens.MINUS)
             node = UnaryOp(token, self.factor())
+            return node
+
+        # To parse `var x = [1, 2];
+        elif token.type == Tokens.LBRACK:
+            self.consume(Tokens.LBRACK)
+            arr_elements = []
+            node = self.expr()
+            if not isinstance(node, NoOp):
+                arr_elements.append(node)
+
+            while self.curr_token.type == Tokens.COMMA:
+                self.consume(Tokens.COMMA)
+                arr_elements.append(self.expr())
+
+            self.consume(Tokens.RBRACK)
+            node = Array(arr_elements)
             return node
 
         elif token.type == Tokens.LPAREN:
@@ -1186,6 +1236,9 @@ class Interpreter(NodeVisiter):
 
     def visit_Num(self, node):
         return int(node.value)
+
+    def visit_Array(self, node):
+        return [self.visit(val) for val in node.values]
 
     def visit_NoOp(self, node):
         return True
