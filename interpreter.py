@@ -3,22 +3,11 @@ import sys
 from collections import OrderedDict
 
 example = """
-        /*
-        if( 1 == 6 || 3 == 3 ){
-            log("should not work");
-        };
-
-        if( 1 + 6 > 3 + 3 ){
-            log("should not work");
-        };
-
-        if( 1 + 6 > 3 + 3 && 1 == 1 ){
-            log("should not work");
-        };
-        */
-
-        var x = [1, 2];
+        var x = [1, 2, 3];
+        x[1+1] = 1;
+        var y = x[3];
         log(x);
+        log(y);
 
 """
 
@@ -442,10 +431,12 @@ class Array:
     __repr__ = __str__
 
 
+# TODO: add more info to AST
 class Identifier:
-    def __init__(self, token):
+    def __init__(self, token, index=None):
         self.token = token
         self.value = token.value  # var name
+        self.index = index
 
     def __str__(self):
         return "({} : {})".format(self.__class__.__name__, self.value)
@@ -508,10 +499,12 @@ class IfStmt:
     __repr__ = __str__
 
 
+# TODO: add more info to AST
 class Assignment:
-    def __init__(self, left, right):
+    def __init__(self, left, right, index=None):
         self.left = left
         self.right = right
+        self.index = index
 
     def __str__(self):
         return "Assignment<{} : {}  -> {}>".format(
@@ -670,6 +663,7 @@ class Parser:
 
         return NoOp()
 
+    # TODO: modify to parse `var x = y[2]`
     def var_declaration(self):
         self.consume(Tokens._var)
         left = self.curr_token.value
@@ -751,6 +745,7 @@ class Parser:
         expr = self.expr()
         return ReturnStmt(expr)
 
+    # TODO: improve code reuse
     def id(self):
         token = self.curr_token
         self.consume(Tokens.IDENTIFIER)
@@ -759,7 +754,26 @@ class Parser:
             return self.function_call(token)
 
         if self.curr_token.type == Tokens.EQUAL:
-            return self.var_assigne(token)
+            left = token.value
+            self.consume(Tokens.EQUAL)
+            right = self.expr()
+            return Assignment(left, right, index)
+
+        # if To parse `x[1] = 1`
+        # else To parse `var y = x[1]`
+        if self.curr_token.type == Tokens.LBRACK:
+            self.consume(Tokens.LBRACK)
+            index = self.expr()
+            self.consume(Tokens.RBRACK)
+
+            if self.curr_token.type == Tokens.EQUAL:
+                left = token.value
+                self.consume(Tokens.EQUAL)
+                right = self.expr()
+                return Assignment(left, right, index)
+
+            else:
+                return Identifier(token, index)
 
         if self.curr_token.type == Tokens.PLUSPLUS:
             op = self.curr_token
@@ -773,13 +787,6 @@ class Parser:
 
         # variable
         return Identifier(token)
-
-    # TODO: modify to parse `var x[1] = 1`
-    def var_assigne(self, token):
-        left = token.value
-        self.consume(Tokens.EQUAL)
-        right = self.expr()
-        return Assignment(left, right)
 
     def function_call(self, token):
         args = []
@@ -807,7 +814,6 @@ class Parser:
             return self.parse_string()
 
         elif token.type == Tokens.IDENTIFIER:
-            # TODO: modify self.id() to parse `var x = y[2]`
             return self.id()
 
         elif token.type == Tokens.NUMBER:
@@ -987,10 +993,13 @@ class SymbolTable:
     def insert(self, name, value):
         self.table[name] = value
 
-    def reassign(self, name, value):
+    def reassign(self, name, value, index=None):
         old_val = self.table.get(name)
         if old_val is not None:
-            self.table[name] = value
+            if index is not None:
+                self.table[name][index] = value
+            else:
+                self.table[name] = value
             return value
 
         if self.level == 1:
@@ -1216,8 +1225,10 @@ class Interpreter(NodeVisiter):
     def visit_Assignment(self, node):
         name = node.left
         value = self.visit(node.right)
+        if node.index is not None:
+            index = self.visit(node.index)
 
-        if self.current_scope.reassign(name, value) is not None:
+        if self.current_scope.reassign(name, value, index) is not None:
             return name
         else:
             self.error(node.left)
@@ -1226,6 +1237,10 @@ class Interpreter(NodeVisiter):
         value = self.current_scope.get(node.value)
         if value is None:
             self.error(node.value)
+        if node.index is not None:
+            index = self.visit(node.index)
+            return value[index]
+
         return value
 
     def visit_String(self, node):
