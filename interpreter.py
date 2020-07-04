@@ -3,9 +3,19 @@ import sys
 from collections import OrderedDict
 
 example = """
-        var x = {name: "jack", age: 3};
-        log(x);
+        function logme(){
+            log("logme");
+        };
+
+        var x = {name: "jack", age: [1, [1, 2]], print: logme};
+        var y = x.age[1];
+        log(y[1]);
+        var print = x.print;
+        print();
 """
+# TODO: add array testing
+# TODO: add obj testing
+
 
 # fmt: off
 class Tokens():
@@ -16,6 +26,7 @@ class Tokens():
     PLUSPLUS    = "++"
     PLUSPLUS    = "++"
     MINUSMINUS  = "--"
+    DOT         = "."
     PLUS        = "+"
     MINUS       = "-"
     MUL         = "*"
@@ -38,7 +49,7 @@ class Tokens():
     SEMI        = ";"
     EQUAL       = "="
     EOF         = "EOF"
-    ID          = "ID"
+    ID          = "ID" # what is this for?
     STRING      = "STRING"
     NUMBER      = "NUMBER"
     IDENTIFIER  = "IDENTIFIER"
@@ -152,6 +163,10 @@ class Lexer:
 
             if self.curr_char == "/" and self.peek() == "*":
                 self.skip_comment()
+
+            if self.curr_char == Tokens.DOT:
+                self.advance()
+                return Token(Tokens.DOT, Tokens.DOT)
 
             if self.curr_char == Tokens.COMMA:
                 self.advance()
@@ -441,13 +456,16 @@ class Obj:
 
 # TODO: add more info to AST
 class Identifier:
-    def __init__(self, token, index=None):
+    def __init__(self, token, index=None, prop=None):
         self.token = token
         self.value = token.value  # var name
         self.index = index
+        self.prop = prop
 
     def __str__(self):
-        return "({} : {})".format(self.__class__.__name__, self.value)
+        return "({} : {} {}, {})".format(
+            self.__class__.__name__, self.value, self.index, self.prop
+        )
 
     __repr__ = __str__
 
@@ -767,6 +785,12 @@ class Parser:
             right = self.expr()
             return Assignment(left, right, index)
 
+        if self.curr_token.type == Tokens.DOT:
+            self.consume(Tokens.DOT)
+            prop = self.expr()
+            return Identifier(token, None, prop)
+
+        # TODO: check for nested array indexing `log(x[1][2])`
         # if To parse `x[1] = 1`
         # else To parse `var y = x[1]`
         if self.curr_token.type == Tokens.LBRACK:
@@ -1269,6 +1293,15 @@ class Interpreter(NodeVisiter):
         if node.index is not None:
             index = self.visit(node.index)
             return value[index]
+
+        if node.prop is not None:
+            if node.prop.index:
+                index = self.visit(node.prop.index)
+                val = value[node.prop.value][index]
+                return val
+            else:
+                val = value[node.prop.value]
+                return val
 
         return value
 
