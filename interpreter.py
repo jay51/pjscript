@@ -3,12 +3,8 @@ import sys
 from collections import OrderedDict
 
 example = """
-        var x = [1, 2, 3];
-        x[1+1] = 1;
-        var y = x[3];
+        var x = {name: "jack", age: 3};
         log(x);
-        log(y);
-
 """
 
 # fmt: off
@@ -36,11 +32,9 @@ class Tokens():
     RPAREN      = ")"
     LCURLY      = "{"
     RCURLY      = "}"
-
     LBRACK      = "["
     RBRACK      = "]"
-
-
+    COLON       = ":"
     SEMI        = ";"
     EQUAL       = "="
     EOF         = "EOF"
@@ -162,6 +156,10 @@ class Lexer:
             if self.curr_char == Tokens.COMMA:
                 self.advance()
                 return Token(Tokens.COMMA, Tokens.COMMA)
+
+            if self.curr_char == Tokens.COLON:
+                self.advance()
+                return Token(Tokens.COLON, Tokens.COLON)
 
             if self.curr_char == Tokens.LPAREN:
                 self.advance()
@@ -427,6 +425,16 @@ class Array:
 
     def __str__(self):
         return "({} : {})".format(self.__class__.__name__, self.values)
+
+    __repr__ = __str__
+
+
+class Obj:
+    def __init__(self, obj):
+        self.obj = obj
+
+    def __str__(self):
+        return "({} : {})".format(self.__class__.__name__, self.obj)
 
     __repr__ = __str__
 
@@ -803,9 +811,28 @@ class Parser:
         self.consume(Tokens.RPAREN)
         return CallExpression(token.value, args)
 
-    # var x = [];
-    # var x[21];
-    # var x = y[21];
+    def parse_obj(self):
+        obj = dict()
+
+        self.consume(Tokens.LCURLY)
+        # TODO: should this be a call to expression to allow for things like `var x = {getName(): person}`
+        if self.curr_token.type == Tokens.IDENTIFIER:
+            prop_name = self.curr_token.value
+            self.consume(Tokens.IDENTIFIER)
+            self.consume(Tokens.COLON)
+            prop_val = self.expression()
+            obj[prop_name] = prop_val
+
+            while self.curr_token.type == Tokens.COMMA:
+                self.consume(Tokens.COMMA)
+                prop_name = self.curr_token.value
+                self.consume(Tokens.IDENTIFIER)
+                self.consume(Tokens.COLON)
+                prop_val = self.expression()
+                obj[prop_name] = prop_val
+
+        self.consume(Tokens.RCURLY)
+        return Obj(obj)
 
     def factor(self):
         token = self.curr_token
@@ -833,7 +860,6 @@ class Parser:
             node = UnaryOp(token, self.factor())
             return node
 
-        # To parse `var x = [1, 2];
         elif token.type == Tokens.LBRACK:
             self.consume(Tokens.LBRACK)
             arr_elements = []
@@ -848,6 +874,9 @@ class Parser:
             self.consume(Tokens.RBRACK)
             node = Array(arr_elements)
             return node
+
+        elif token.type == Tokens.LCURLY:
+            return self.parse_obj()
 
         elif token.type == Tokens.LPAREN:
             self.consume(Tokens.LPAREN)
@@ -1254,6 +1283,9 @@ class Interpreter(NodeVisiter):
 
     def visit_Array(self, node):
         return [self.visit(val) for val in node.values]
+
+    def visit_Obj(self, node):
+        return {key: self.visit(val) for key, val in node.obj.items()}
 
     def visit_NoOp(self, node):
         return True
