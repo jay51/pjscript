@@ -396,7 +396,11 @@ class Program:
         self.body = body
 
     def __str__(self):
-        return "<{} : {}>".format(self.__class__.__name__, self.body)
+        return """< {}
+            {}
+        />""".format(
+            self.__class__.__name__, self.body
+        )
 
     __repr__ = __str__
 
@@ -407,7 +411,7 @@ class Num:
         self.value = token.value
 
     def __str__(self):
-        return "({} : {})".format(self.__class__.__name__, self.value)
+        return "<{} : {}>".format(self.__class__.__name__, self.value)
 
     __repr__ = __str__
 
@@ -418,7 +422,7 @@ class Null:
         self.value = token.value
 
     def __str__(self):
-        return "({} : {})".format(self.__class__.__name__, self.value)
+        return "<{} : {}>".format(self.__class__.__name__, self.value)
 
     __repr__ = __str__
 
@@ -429,7 +433,7 @@ class String:
         self.value = token.value
 
     def __str__(self):
-        return "({} : {})".format(self.__class__.__name__, self.value)
+        return "<{} : {}>".format(self.__class__.__name__, self.value)
 
     __repr__ = __str__
 
@@ -439,7 +443,7 @@ class Array:
         self.values = arr_elements
 
     def __str__(self):
-        return "({} : {})".format(self.__class__.__name__, self.values)
+        return "< {} : {} />".format(self.__class__.__name__, self.values)
 
     __repr__ = __str__
 
@@ -449,7 +453,11 @@ class Obj:
         self.obj = obj
 
     def __str__(self):
-        return "({} : {})".format(self.__class__.__name__, self.obj)
+        string = ""
+        for key, val in self.obj.items():
+            string += f"\t{key}: {val}\n"
+
+        return """< {} \n{} />""".format(self.__class__.__name__, string)
 
     __repr__ = __str__
 
@@ -463,7 +471,7 @@ class Identifier:
         self.prop = prop
 
     def __str__(self):
-        return "({} : {} {}, {})".format(
+        return "< {} | {} | {} | {} >".format(
             self.__class__.__name__, self.value, self.index, self.prop
         )
 
@@ -476,9 +484,7 @@ class VarDeclaration:
         self.right = right
 
     def __str__(self):
-        return "VarDeclaration({} : {}  -> {})".format(
-            self.left, self.right.__class__.__name__, self.right
-        )
+        return "{} <\n\t{} \n/>".format(self.__class__.__name__, self.right)
 
     __repr__ = __str__
 
@@ -490,7 +496,9 @@ class FuncDeclaration:
         self.body = body
 
     def __str__(self):
-        return "FuncDeclaration<{} : {} >".format(self.params, self.body)
+        return "{} < {} : \n\t{} />".format(
+            self.__class__.__name__, self.params, self.body
+        )
 
     __repr__ = __str__
 
@@ -503,7 +511,9 @@ class ForLoop:
         self.body = body
 
     def __str__(self):
-        return "ForLoop<{} : {} : {} >".format(self.var, self.condition, self.expr)
+        return "{} < \n\t{} | \n\t{} | \n\t{} | \n\t{} \n/>".format(
+            self.__class__.__name__, self.var, self.condition, self.expr, self.body
+        )
 
     __repr__ = __str__
 
@@ -516,10 +526,12 @@ class IfStmt:
         self.else_stmt = else_stmt
 
     def __str__(self):
-        return "If( {} : {} : {} )".format(
+        return "{} < {} | {} | {} | \n\t{} \n/>".format(
+            self.__class__.__name__,
             self.condition,
             self.else_if_stmt or "else if part",
             self.else_stmt or "else part",
+            self.body,
         )
 
     __repr__ = __str__
@@ -533,8 +545,11 @@ class Assignment:
         self.index = index
 
     def __str__(self):
-        return "Assignment<{} : {}  -> {}>".format(
-            self.left, self.right.__class__.__name__, self.right.value
+        return "{} < {} : {}  -> {} />".format(
+            self.__class__.__name__,
+            self.left,
+            self.right.__class__.__name__,
+            self.right.value,
         )
 
     __repr__ = __str__
