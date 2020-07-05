@@ -783,7 +783,7 @@ class Parser:
             left = token.value
             self.consume(Tokens.EQUAL)
             right = self.expr()
-            return Assignment(left, right, index)
+            return Assignment(left, right)
 
         if self.curr_token.type == Tokens.DOT:
             self.consume(Tokens.DOT)
@@ -1278,6 +1278,7 @@ class Interpreter(NodeVisiter):
     def visit_Assignment(self, node):
         name = node.left
         value = self.visit(node.right)
+        index = None
         if node.index is not None:
             index = self.visit(node.index)
 
