@@ -6,6 +6,8 @@ language is taken from other real programming languages.
 ### Data types:
     - Int (positive & negitive)
     - String
+    - Array
+    - Object
     - Null
 
 
@@ -130,4 +132,19 @@ for(var i = 0; i < 5; i++){
     };
 };
 
+```
+
+### Array
+```
+// numbers
+var numbers = [1, 2, 3];
+log(numbers);
+log(numbers[2]);
+
+
+// Strings
+var person = ["jack", "jay", "nick"];
+for(var i = 0; i < 3; i++){
+    log(person[i]);
+};
 ```

@@ -74,6 +74,11 @@ example6 = """
     };
 """
 
+example7 = """
+    var numbers = [1, 2, 3];
+    log(numbers[1]);
+"""
+
 
 class TestLexer:
     def test_expression(self):
@@ -165,6 +170,18 @@ class TestLexer:
         # fmt: on
 
         lexer = Lexer(example6)
+        for idx, tok in enumerate(lexer):
+            assert tok.type == expected_result[idx]
+
+    def test_array(self):
+        # fmt: off
+        expected_result = [
+            "var", "IDENTIFIER", "=", "[", "NUMBER", ",", "NUMBER", ",", "NUMBER", "]", ";",
+            "IDENTIFIER", "(", "IDENTIFIER", "[", "NUMBER", "]", ")", ";", "EOF"
+        ]
+        # fmt: on
+
+        lexer = Lexer(example7)
         for idx, tok in enumerate(lexer):
             assert tok.type == expected_result[idx]
 
@@ -270,6 +287,19 @@ class TestParser:
         expected_result = [VarDeclaration, IfStmt, VarDeclaration, IfStmt, NoOp]
 
         lexer = Lexer(example6)
+        parser = Parser(lexer)
+
+        result = []
+        for node in parser.parse().body:
+            result.append(node)
+
+        for idx, node in enumerate(result):
+            assert isinstance(node, expected_result[idx])
+
+    def test_array(self):
+        expected_result = [VarDeclaration, CallExpression]
+
+        lexer = Lexer(example7)
         parser = Parser(lexer)
 
         result = []
@@ -401,6 +431,19 @@ class TestInterpreter:
         tmp_stdout = StringIO()
         sys.stdout = tmp_stdout
         lexer = Lexer(example)
+        tree = Parser(lexer).parse()
+        interpreter = Interpreter(tree)
+        interpreter.interpret()
+        sys.stdout = sys.__stdout__
+        assert tmp_stdout.getvalue() == expected_result.getvalue()
+
+    def test_array(self):
+        expected_result = StringIO()
+        print("2", file=expected_result, end=" \n")
+
+        tmp_stdout = StringIO()
+        sys.stdout = tmp_stdout
+        lexer = Lexer(example7)
         tree = Parser(lexer).parse()
         interpreter = Interpreter(tree)
         interpreter.interpret()
