@@ -3,15 +3,10 @@ import sys
 from collections import OrderedDict
 
 example = """
-        function logme(){
-            log("logme");
-        };
 
-        var x = {name: "jack", age: [1, [1, 2]], print: logme};
-        var y = x.age[1];
-        log(y[1]);
-        var print = x.print;
-        print();
+        if(!(1 != 1)) {
+            log("yes");
+        };
 """
 # TODO: change function grammar to be function <name>(){}; where name is optional
 # TODO: add obj testing
@@ -1008,12 +1003,14 @@ class Parser:
     def expr(self):
         node = self.expression()
         # These operators are evaluated last
-        while self.curr_token.type in (Tokens.OR, Tokens.AND):
+        while self.curr_token.type in (Tokens.OR, Tokens.AND, Tokens.NOT):
             token = self.curr_token
             if token.type == Tokens.OR:
                 self.consume(Tokens.OR)
             if token.type == Tokens.AND:
                 self.consume(Tokens.AND)
+            if token.type == Tokens.NOT:
+                self.consume(Tokens.NOT)
 
             node = BinOp(left=node, op=token, right=self.expression())
 
@@ -1275,6 +1272,9 @@ class Interpreter(NodeVisiter):
 
         if node.op.type == Tokens.AND:
             return self.visit(node.left) and self.visit(node.right)
+
+        if node.op.type == Tokens.NOT:
+            return not self.visit(node.right)
 
     def visit_PostIncDecOp(self, node):
         value = self.current_scope.get(node.left.value)
