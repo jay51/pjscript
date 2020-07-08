@@ -13,7 +13,7 @@ example = """
         var print = x.print;
         print();
 """
-# TODO: add array testing
+# TODO: change function grammar to be function <name>(){}; where name is optional
 # TODO: add obj testing
 
 
@@ -49,7 +49,6 @@ class Tokens():
     SEMI        = ";"
     EQUAL       = "="
     EOF         = "EOF"
-    ID          = "ID" # what is this for?
     STRING      = "STRING"
     NUMBER      = "NUMBER"
     IDENTIFIER  = "IDENTIFIER"
@@ -362,7 +361,9 @@ Var_assigne, # name = "jack";
 Return: # return 2 * add(2, 2)
     expr: expression
 
-expression: term ((+ | - | < | > | >= | <= | == | !=) term)*
+expression: term ( ((+ | - | == | !=) term) | ((< | > | >= | <=) expression) )*
+
+expr: expression ((&& | `||` | !) expression)*
 
 term: atom ((* | /) atom)*
 
@@ -370,6 +371,8 @@ atom: factor ((-- | ++))*
 
 factor: String
         | STRING
+        | ARRAY
+        | OBJ
         | Num
         | id
         | + factor
@@ -382,6 +385,9 @@ factor: String
 id: CallExpression
     | Var_assigne
     | identifier
+    | ++ identifier
+    | -- identifier
+    | identifier[]
 
 
 identifier: [a-zA-Z][a-zA-Z0-9_]
@@ -704,7 +710,6 @@ class Parser:
 
         return NoOp()
 
-    # TODO: modify to parse `var x = y[2]`
     def var_declaration(self):
         self.consume(Tokens._var)
         left = self.curr_token.value
@@ -806,6 +811,7 @@ class Parser:
             return Identifier(token, None, prop)
 
         # TODO: check for nested array indexing `log(x[1][2])`
+
         # if To parse `x[1] = 1`
         # else To parse `var y = x[1]`
         if self.curr_token.type == Tokens.LBRACK:
