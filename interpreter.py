@@ -3,11 +3,18 @@ import sys
 from collections import OrderedDict
 
 example = """
+    var print = function(){
+        log("yes");
+    };
 
-        if(!(1 != 1)) {
-            log("yes");
-        };
+    print();
+
+    print = function(){
+        log("no");
+    };
+    print();
 """
+
 # TODO: change function grammar to be function <name>(){}; where name is optional
 # TODO: add obj testing
 
@@ -491,8 +498,8 @@ class VarDeclaration:
 
 
 class FuncDeclaration:
-    def __init__(self, name, params, body):
-        self.name = name
+    def __init__(self, params, body, name=None):
+        self.name = name if name else "anonymous"
         self.params = params
         self.body = body
 
@@ -715,8 +722,11 @@ class Parser:
 
     def func_declaration(self):
         self.consume(Tokens._function)
-        name = self.curr_token.value
-        self.consume(Tokens.IDENTIFIER)
+        name = None
+        if self.curr_token.type == Tokens.IDENTIFIER:
+            name = self.curr_token.value
+            self.consume(Tokens.IDENTIFIER)
+
         self.consume(Tokens.LPAREN)
         node = self.expr()
         params = []
@@ -732,7 +742,7 @@ class Parser:
         body = self.program(name)
 
         self.consume(Tokens.RCURLY)
-        return FuncDeclaration(name, params, body)
+        return FuncDeclaration(params, body, name)
 
     def for_stmt(self):
         self.consume(Tokens._for)
@@ -758,12 +768,9 @@ class Parser:
     def if_stmt(self):
         self.consume(Tokens._if)
         self.consume(Tokens.LPAREN)
-
         condition = self.expr()
-
         self.consume(Tokens.RPAREN)
         self.consume(Tokens.LCURLY)
-
         body = self.program("if")
         self.consume(Tokens.RCURLY)
 
@@ -889,6 +896,9 @@ class Parser:
         elif token.type == Tokens._null:
             self.consume(Tokens._null)
             return Null(token)
+
+        elif token.type == Tokens._function:
+            return self.func_declaration()
 
         elif token.type == Tokens.PLUS:
             self.consume(Tokens.PLUS)
@@ -1239,8 +1249,9 @@ class Interpreter(NodeVisiter):
         return None
 
     def visit_FuncDeclaration(self, node):
-        self.current_scope.insert(node.name, node)
-        return node.name
+        if node.name != "anonymous":
+            self.current_scope.insert(node.name, node)
+        return node
 
     def visit_ReturnStmt(self, node):
         return self.visit(node.expr)
