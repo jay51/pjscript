@@ -422,8 +422,13 @@ class TestInterpreter:
             if( 1 + 6 > 3 + 3 && 1 == 1 ){
                 log("yes");
             };
+
+            if(!(1 != 1)) {
+                log("yes");
+            };
         """
         expected_result = StringIO()
+        print("yes", file=expected_result, end=" \n")
         print("yes", file=expected_result, end=" \n")
         print("yes", file=expected_result, end=" \n")
         print("yes", file=expected_result, end=" \n")
@@ -449,3 +454,4 @@ class TestInterpreter:
         interpreter.interpret()
         sys.stdout = sys.__stdout__
         assert tmp_stdout.getvalue() == expected_result.getvalue()
+
