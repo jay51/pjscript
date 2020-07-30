@@ -462,9 +462,12 @@ class TestInterpreter:
             list[1][0] = 10;
             list[2][1][0] = 10;
             log(list);
+            log(list[2][1][0]);
+);
         """
         expected_result = StringIO()
         print("[10, [10, 2], [3, [10]], 5]", file=expected_result, end=" \n")
+        print("10", file=expected_result, end=" \n")
 
         tmp_stdout = StringIO()
         sys.stdout = tmp_stdout

@@ -3,11 +3,8 @@ import sys
 from collections import OrderedDict
 
 example = """
-    var list = [1, 2, [3, 4], [0, [2] ] ];
-    list[1] = 10;
-    list[2][1] = 12;
-    list[3][1][0] = 10;
-    log(list);
+    var list = [1, 2, [3, 4, [0, [2] ]]];
+    log(list[2][2][1]);
 """
 
 # TODO: change function grammar to be function <name>(){}; where name is optional
@@ -467,10 +464,10 @@ class Obj:
 
 # TODO: add more info to AST
 class Identifier:
-    def __init__(self, token, index=None, prop=None):
+    def __init__(self, token, indeces=None, prop=None):
         self.token = token
         self.value = token.value  # var name
-        self.index = index
+        self.indeces = indeces
         self.prop = prop
 
     def __str__(self):
@@ -833,7 +830,7 @@ class Parser:
                 return Assignment(left, right, indeces)
 
             else:
-                return Identifier(token, index)
+                return Identifier(token, indeces)
 
         if self.curr_token.type == Tokens.PLUSPLUS:
             op = self.curr_token
@@ -1335,9 +1332,11 @@ class Interpreter(NodeVisiter):
         value = self.current_scope.get(node.value)
         if value is None:
             self.error(node.value)
-        if node.index is not None:
-            index = self.visit(node.index)
-            return value[index]
+        if node.indeces is not None:
+            for v in node.indeces:
+                index = self.visit(v)
+                value = value[index]
+            return value
 
         if node.prop is not None:
             if node.prop.index:
