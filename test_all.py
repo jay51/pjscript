@@ -455,6 +455,26 @@ class TestInterpreter:
         sys.stdout = sys.__stdout__
         assert tmp_stdout.getvalue() == expected_result.getvalue()
 
+    def test_array_indexing(self):
+        example = """
+            var list = [0, [1, 2], [3, [4] ], 5 ];
+            list[0] = 10;
+            list[1][0] = 10;
+            list[2][1][0] = 10;
+            log(list);
+        """
+        expected_result = StringIO()
+        print("[10, [10, 2], [3, [10]], 5]", file=expected_result, end=" \n")
+
+        tmp_stdout = StringIO()
+        sys.stdout = tmp_stdout
+        lexer = Lexer(example)
+        tree = Parser(lexer).parse()
+        interpreter = Interpreter(tree)
+        interpreter.interpret()
+        sys.stdout = sys.__stdout__
+        assert tmp_stdout.getvalue() == expected_result.getvalue()
+
     def test_anonymous_function(self):
         example = """
             var print = function(){

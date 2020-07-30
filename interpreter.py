@@ -3,16 +3,11 @@ import sys
 from collections import OrderedDict
 
 example = """
-    var print = function(){
-        log("yes");
-    };
-
-    print();
-
-    print = function(){
-        log("no");
-    };
-    print();
+    var list = [1, 2, [3, 4], [0, [2] ] ];
+    list[1] = 10;
+    list[2][1] = 12;
+    list[3][1][0] = 10;
+    log(list);
 """
 
 # TODO: change function grammar to be function <name>(){}; where name is optional
@@ -547,10 +542,10 @@ class IfStmt:
 
 # TODO: add more info to AST
 class Assignment:
-    def __init__(self, left, right, index=None):
+    def __init__(self, left, right, indeces=None):
         self.left = left
         self.right = right
-        self.index = index
+        self.indeces = indeces
 
     def __str__(self):
         return "{} < {} : {}  -> {} />".format(
@@ -820,12 +815,22 @@ class Parser:
             self.consume(Tokens.LBRACK)
             index = self.expr()
             self.consume(Tokens.RBRACK)
+            indeces = [index]
+
+            while True:
+                if self.curr_token.type == Tokens.LBRACK:
+                    self.consume(Tokens.LBRACK)
+                    index = self.expr()
+                    self.consume(Tokens.RBRACK)
+                    indeces.append(index)
+                else:
+                    break
 
             if self.curr_token.type == Tokens.EQUAL:
                 left = token.value
                 self.consume(Tokens.EQUAL)
                 right = self.expr()
-                return Assignment(left, right, index)
+                return Assignment(left, right, indeces)
 
             else:
                 return Identifier(token, index)
@@ -1074,13 +1079,10 @@ class SymbolTable:
     def insert(self, name, value):
         self.table[name] = value
 
-    def reassign(self, name, value, index=None):
+    def reassign(self, name, value):
         old_val = self.table.get(name)
         if old_val is not None:
-            if index is not None:
-                self.table[name][index] = value
-            else:
-                self.table[name] = value
+            self.table[name] = value
             return value
 
         if self.level == 1:
@@ -1308,16 +1310,26 @@ class Interpreter(NodeVisiter):
 
     # THIS IS FOR REASSIGNMENT
     def visit_Assignment(self, node):
-        name = node.left
-        value = self.visit(node.right)
-        index = None
-        if node.index is not None:
-            index = self.visit(node.index)
+        name = node.left  # var name
+        value = self.visit(node.right)  # expr
+        if node.indeces is not None:
+            arr = self.current_scope.get(name)
+            arr_sub = arr
+            for idx, v in enumerate(node.indeces):
+                if len(node.indeces) == idx + 1:
+                    index = self.visit(v)
+                    arr_sub[index] = value
+                else:
+                    index = self.visit(v)
+                    arr_sub = arr_sub[index]
 
-        if self.current_scope.reassign(name, value, index) is not None:
-            return name
+            self.current_scope.reassign(name, arr)
+
         else:
-            self.error(node.left)
+            if self.current_scope.reassign(name, value) is None:
+                self.error(node.left)
+
+        return name
 
     def visit_Identifier(self, node):
         value = self.current_scope.get(node.value)
