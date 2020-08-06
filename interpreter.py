@@ -2,18 +2,10 @@
 import sys
 from collections import OrderedDict
 
-example = """
-    var list = [1, 2, [3, 4, [0, [2] ]]];
-    log(list[2][2][1]);
-"""
-
-# TODO: change function grammar to be function <name>(){}; where name is optional
 # TODO: add obj testing
-
 
 # fmt: off
 class Tokens():
-    # TODO: "!" is still not implemented!
     OR          = "|"
     AND         = "&"
     NOT         = "!"
@@ -389,7 +381,6 @@ identifier: [a-zA-Z][a-zA-Z0-9_]
 """
 
 
-# TODO: print nested nodes or the AST nicly
 class Program:
     def __init__(self, body, scope=None):
         self.scope = scope
@@ -462,7 +453,6 @@ class Obj:
     __repr__ = __str__
 
 
-# TODO: add more info to AST
 class Identifier:
     def __init__(self, token, indeces=None, prop=None):
         self.token = token
@@ -537,7 +527,6 @@ class IfStmt:
     __repr__ = __str__
 
 
-# TODO: add more info to AST
 class Assignment:
     def __init__(self, left, right, indeces=None):
         self.left = left
@@ -804,8 +793,6 @@ class Parser:
             prop = self.expr()
             return Identifier(token, None, prop)
 
-        # TODO: check for nested array indexing `log(x[1][2])`
-
         # if To parse `x[1] = 1`
         # else To parse `var y = x[1]`
         if self.curr_token.type == Tokens.LBRACK:
@@ -864,7 +851,6 @@ class Parser:
         obj = dict()
 
         self.consume(Tokens.LCURLY)
-        # TODO: should this be a call to expression to allow for things like `var x = {getName(): person}`
         if self.curr_token.type == Tokens.IDENTIFIER:
             prop_name = self.curr_token.value
             self.consume(Tokens.IDENTIFIER)
@@ -1380,21 +1366,27 @@ def print_tok(lexer, callback=None):
 
 if __name__ == "__main__":
 
-    if len(sys.argv) >= 2:
-        lexer = Lexer(example)
-        # THIS WILL SHOW YOU THE TOKENS
-        if sys.argv[1] == "-L":
-            print_tok(lexer)
+    if len(sys.argv) == 2:
+        with open(sys.argv[1], "r") as f:
+            source_code = f.read()
+            lexer = Lexer(source_code)
+            parser = Parser(lexer)
+            tree = parser.parse()
+            interpreter = Interpreter(tree)
+            interpreter.interpret()
 
-        parser = Parser(lexer)
-        # THIS WILL SHOW YOU TOP LEVE OF TREE
-        if sys.argv[1] == "-A":
-            for node in parser.parse().body:
-                print(node)
+    if len(sys.argv) == 3:
+        with open(sys.argv[2], "r") as f:
+            source_code = f.read()
+            lexer = Lexer(source_code)
+            parser = Parser(lexer)
+            # THIS WILL SHOW YOU THE TOKENS
+            if sys.argv[1] == "-L":
+                print_tok(lexer)
 
-    else:
-        lexer = Lexer(example)
-        parser = Parser(lexer)
-        tree = parser.parse()
-        interpreter = Interpreter(tree)
-        interpreter.interpret()
+            # THIS WILL SHOW YOU TOP LEVE OF TREE
+            elif sys.argv[1] == "-A":
+                for node in parser.parse().body:
+                    print(node)
+            else:
+                print("UNKOWN CAMMAND!")
