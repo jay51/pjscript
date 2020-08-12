@@ -3,6 +3,9 @@ programming languages are not a black box and that you could learn the basic con
 While this language is not a real programming language however a lot of the internal concepts displayed in this
 language is taken from other real programming languages.
 
+### how to Run
+```python -m pjscript <file.js>```
+
 ### Data types:
     - Int (positive & negitive)
     - String

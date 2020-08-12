@@ -1,7 +1,5 @@
 import pytest
-from pyscript import *
-
-# from .. import *
+from pjscript import *
 from io import StringIO
 import sys
 

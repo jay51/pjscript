@@ -5,14 +5,14 @@ with open("README.md", "r") as fh:
     description = fh.read()
 
 setuptools.setup(
-    name="pyscript",
-    version="0.0.1",
+    name="pjscript",
+    version="0.0.2",
     author="Jamal Al",
     author_email="geenjay51@gmail.com",
     description="JS like simple language LEXER, PARSER and INTERPRETER",
     long_description=description,
     long_description_content_type="text/markdown",
-    url="https://github.com/jay51/pyscript",
+    url="https://github.com/jay51/pjscript",
     packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",
