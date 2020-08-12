@@ -1,6 +1,7 @@
 import pytest
-from interpreter import Lexer, Parser
-from interpreter import *
+from pyscript import *
+
+# from .. import *
 from io import StringIO
 import sys
 

@@ -135,7 +135,7 @@ for(var i = 0; i < 5; i++){
 ```
 
 ### Array
-```
+```js
 // numbers
 var numbers = [1, 2, 3];
 log(numbers);
