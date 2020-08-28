@@ -461,9 +461,7 @@ class Identifier:
         self.prop = prop
 
     def __str__(self):
-        return "< {} | {} | {} | {} >".format(
-            self.__class__.__name__, self.value, self.index, self.prop
-        )
+        return "< {} | {} | {} >".format(self.__class__.__name__, self.value, self.prop)
 
     __repr__ = __str__
 
@@ -646,7 +644,6 @@ class Parser:
                 node = self.statement()
                 if isinstance(node, NoOp):
                     break
-
                 body.append(node)
 
             elif self.curr_token.type != Tokens.SEMI:
@@ -772,6 +769,11 @@ class Parser:
     def return_stmt(self):
         self.consume(Tokens._return)
         expr = self.expr()
+        # `return;` with no thing to return will return NoOp which returns True
+        # but JS behievor is to return Null, so we're doing that. is it consistent with the language? idk.
+        if isinstance(expr, NoOp):
+            default_ret = Null(Token(Tokens._null, Tokens._null))
+            return ReturnStmt(default_ret)
         return ReturnStmt(expr)
 
     # TODO: improve code reuse
@@ -1355,10 +1357,3 @@ class Interpreter(NodeVisiter):
 
     def interpret(self):
         self.visit(self.tree)
-
-
-def print_tok(lexer, callback=None):
-    for idx, token in enumerate(lexer):
-        print(idx, token)
-        if callback:
-            callback(token)

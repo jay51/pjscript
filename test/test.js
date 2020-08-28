@@ -1,8 +1,14 @@
 
 
 function loop(){
-    /* var i = 0; */
+    /* var i = 0;
+    for(;;){
+        log("yes");
+    };
+     */
     log("inside");
+    return;
 };
 
-loop();
+var result = loop();
+log(result);

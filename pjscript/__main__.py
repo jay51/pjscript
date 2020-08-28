@@ -1,6 +1,14 @@
 from .interpreter import Lexer, Parser, Interpreter
 import sys
 
+
+def print_tok(lexer, callback=None):
+    for idx, token in enumerate(lexer):
+        print(idx, token)
+        if callback:
+            callback(token)
+
+
 if __name__ == "__main__":
     if len(sys.argv) == 2:
         with open(sys.argv[1], "r") as f:
