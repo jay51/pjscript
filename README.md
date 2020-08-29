@@ -151,3 +151,15 @@ for(var i = 0; i < 3; i++){
     log(person[i]);
 };
 ```
+
+### Object
+```js
+// Object
+var person = {
+    name: "jack",
+    age: 23
+};
+
+log(person.name);
+log(person.age);
+```
