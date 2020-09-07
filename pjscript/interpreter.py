@@ -1326,14 +1326,18 @@ class Interpreter(NodeVisiter):
                 value = value[index]
             return value
 
-        if node.prop is not None:
-            if node.prop.index:
-                index = self.visit(node.prop.index)
-                val = value[node.prop.value][index]
-                return val
-            else:
-                val = value[node.prop.value]
-                return val
+        # prop is a property on an object. each identifer will have a prop set to None by default.
+        # To access a nested prop, we link props togather. <prop: name> -> <prop: first> -> <String: "jack">
+        prop = node.prop
+        if prop is not None:
+            val = value
+            while prop is not None:
+                # age = {born: <num: 23>, died: <num: 232>}
+                val = self.visit(val.get(prop.value))
+                prop = prop.prop
+                # print("born ", prop.prop.value, val.get(prop.prop.value))
+
+            return val
 
         return value
 
@@ -1350,7 +1354,8 @@ class Interpreter(NodeVisiter):
         return [self.visit(val) for val in node.values]
 
     def visit_Obj(self, node):
-        return {key: self.visit(val) for key, val in node.obj.items()}
+        return node.obj
+        # return {key: self.visit(val) for key, val in node.obj.items()}
 
     def visit_NoOp(self, node):
         return True
