@@ -11,11 +11,17 @@ function loop(){
         age: {
             born: 23,
             died: 28
+        },
+        features: {
+            hair: {
+                curly: [1, 2, 3],
+                notcurly: 0
+            }
         }
+
     };
 
-    log(person.name);
-    log(person.age.born);
+    log(person.features.hair.curly[1]);
     return;
 };
 

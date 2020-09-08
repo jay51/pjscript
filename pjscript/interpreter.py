@@ -1334,6 +1334,11 @@ class Interpreter(NodeVisiter):
             while prop is not None:
                 # age = {born: <num: 23>, died: <num: 232>}
                 val = self.visit(val.get(prop.value))
+                if hasattr(prop, "indeces"):
+                    if prop.indeces is not None:
+                        for v in prop.indeces:
+                            index = self.visit(v)
+                            val = val[index]
                 prop = prop.prop
                 # print("born ", prop.prop.value, val.get(prop.prop.value))
 
