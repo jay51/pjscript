@@ -1326,20 +1326,27 @@ class Interpreter(NodeVisiter):
                 value = value[index]
             return value
 
-        # prop is a property on an object. each identifer will have a prop set to None by default.
+        # prop is a property on an object. each identifier will have a prop set to None by default.
         # To access a nested prop, we link props togather. <prop: name> -> <prop: first> -> <String: "jack">
         prop = node.prop
         if prop is not None:
             val = value
             while prop is not None:
-                # age = {born: <num: 23>, died: <num: 232>}
-                val = self.visit(val.get(prop.value))
-                if hasattr(prop, "indeces"):
-                    if prop.indeces is not None:
-                        for v in prop.indeces:
-                            index = self.visit(v)
-                            val = val[index]
-                prop = prop.prop
+                # hack to make functions inside objects work
+                if isinstance(prop, CallExpression):
+                    val = self.visit(val.get(prop.identifier))
+                    val = self.visit(val.body)
+                    prop = None
+                else:
+                    # to make it work with sub identifiers/objects/props
+                    # age = {born: <num: 23>, died: <num: 232>}
+                    val = self.visit(val.get(prop.value))
+                    if hasattr(prop, "indeces"):
+                        if prop.indeces is not None:
+                            for v in prop.indeces:
+                                index = self.visit(v)
+                                val = val[index]
+                    prop = prop.prop
                 # print("born ", prop.prop.value, val.get(prop.prop.value))
 
             return val
