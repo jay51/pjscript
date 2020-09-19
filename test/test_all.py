@@ -501,3 +501,34 @@ class TestInterpreter:
         interpreter.interpret()
         sys.stdout = sys.__stdout__
         assert tmp_stdout.getvalue() == expected_result.getvalue()
+
+    def test_methods(self):
+        example = """
+            var person = {
+                age: { born: 23, died: 28 },
+                features: {
+                    hair: { curly: [1, 2, 3], notcurly: 0 }
+                },
+
+                printname: function(){
+                    log("printname inside object person");
+                    return 1;
+                }
+            };
+
+            log(person.features.hair.curly[1]);
+            log(person.printname());
+        """
+        expected_result = StringIO()
+        print("2", file=expected_result, end=" \n")
+        print("printname inside object person", file=expected_result, end=" \n")
+        print("1", file=expected_result, end=" \n")  # return value of printname
+
+        tmp_stdout = StringIO()
+        sys.stdout = tmp_stdout
+        lexer = Lexer(example)
+        tree = Parser(lexer).parse()
+        interpreter = Interpreter(tree)
+        interpreter.interpret()
+        sys.stdout = sys.__stdout__
+        assert tmp_stdout.getvalue() == expected_result.getvalue()

@@ -13,7 +13,7 @@ function loop(){
     };
 
     log(person.features.hair.curly[1]);
-    log(person.printname().name);
+    log(person.printname());
     return;
 };
 
