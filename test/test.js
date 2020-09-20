@@ -8,7 +8,7 @@ function loop(){
 
         printname: function(){
             log("printname inside object person");
-            return child;
+            return "working fine";
         }
     };
 

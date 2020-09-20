@@ -4,7 +4,18 @@ While this language is not a real programming language however a lot of the inte
 language is taken from other real programming languages.
 
 ### how to Run
-```python -m pjscript <file.js>```
+```py
+python -m pjscript <file.js>
+
+#or you could use the lexer, parser and interpreter in your python file
+
+from pjcript import *
+
+lexer = Lexer("var x = 1;")
+tree = Parser(lexer)
+interpreter = Interpreter(tree)
+interpreter.interpret()
+```
 
 ### Data types:
     - Int (positive & negitive)

@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="pjscript",
-    version="0.0.2",
+    version="0.0.4",
     author="Jamal Al",
     author_email="geenjay51@gmail.com",
     description="JS like simple language LEXER, PARSER and INTERPRETER",
@@ -21,3 +21,10 @@ setuptools.setup(
     ],
     python_requires=">=3.6",
 )
+
+# to upload to pypi
+# * make sure to change version number
+# 1. python setup.py sdist bdist_wheel
+# 2. twine upload --skip-existing dist/*
+# 3. input username: __token__
+# 4. input password: <your token>
